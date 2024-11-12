@@ -1,12 +1,12 @@
-package com.tradingengine.tradingengine.Services;
+package tradingengine.Services;
 import java.util.*;
 
 import org.springframework.stereotype.Service;
 
-import com.tradingengine.tradingengine.Models.Order;
-import com.tradingengine.tradingengine.Models.Trade;
-import com.tradingengine.tradingengine.Models.OrderSide;
-import com.tradingengine.tradingengine.Models.OrderbookSummary;
+import tradingengine.Models.Order;
+import tradingengine.Models.Trade;
+import tradingengine.Models.OrderSide;
+import tradingengine.Models.OrderbookSummary;
 
 @Service
 public class Orderbook {

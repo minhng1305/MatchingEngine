@@ -1,4 +1,4 @@
-package com.tradingengine.tradingengine.Models;
+package tradingengine.Models;
 
 public class Trade {
     String BuyOrderId;
