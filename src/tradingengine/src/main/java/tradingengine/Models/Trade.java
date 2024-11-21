@@ -1,19 +1,40 @@
-package tradingengine.Models;
+package tradingengine.models;
 
+import java.sql.Timestamp;
+import java.util.UUID;
+
+// Trading records
 public class Trade {
-    String BuyOrderId;
-    String SellOrderId;
-    long Price;
-    int Quantity;
-    int OriginalBuyQuantity;
-    int OriginalSellQuantity;
+    private UUID buyOrderId;
+    private UUID sellOrderId;
+    private long price;
+    public int originalBuyQuantity;
+    public int originalSellQuantity;
+    public int tradingQuantity;
+    public Timestamp timestamp;
 
-    public Trade(String buyOrderId, String sellOrderId, long price, int quantity, int originalBuyQuantity, int originalSellQuantity) {
-        this.BuyOrderId = buyOrderId;
-        this.SellOrderId = sellOrderId;
-        this.Price = price;
-        this.Quantity = quantity;
-        this.OriginalBuyQuantity = originalBuyQuantity;
-        this.OriginalSellQuantity = originalSellQuantity;
+    public Trade(UUID buyOrderId, UUID sellOrderId, long price, int tradingQuantity, int originalBuyQuantity, int originalSellQuantity) {
+        this.buyOrderId = buyOrderId;
+        this.sellOrderId = sellOrderId;
+        this.price = price;
+        this.tradingQuantity = tradingQuantity;
+        this.originalBuyQuantity = originalBuyQuantity;
+        this.originalSellQuantity = originalSellQuantity;
+    }
+
+    public UUID getBuyOrderId() {
+        return buyOrderId;
+    }
+
+    public UUID getSellOrderId() {
+        return sellOrderId;
+    }
+
+    public long getPrice() {
+        return price;
+    }
+
+    public int getTradingQuantity() {
+        return tradingQuantity;
     }
 }

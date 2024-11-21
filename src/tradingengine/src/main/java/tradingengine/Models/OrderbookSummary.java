@@ -1,36 +1,47 @@
-package tradingengine.Models;
+package tradingengine.models;
 
-import java.util.*;;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
 
-public class OrderbookSummary {
-    
-    public List<OrderSummary> TopBuys;
-    public List<OrderSummary> LowestSells;
-    public Queue<Order> LastTenFulfilledOrders;
-    // public String Symbol;
+public class OrderBookSummary {
+    public List<OrderSummary> highestBuys;
+    public List<OrderSummary> lowestSells;
+    public String symbol;
+    public Queue<Order> lastTenFulfilledOrders;
 
-    public OrderbookSummary(List<OrderSummary> topBuys, List<OrderSummary> lowestSells,  Queue<Order> lastTenFulfilledOrders) {
-        this.TopBuys = topBuys;
-        this.LowestSells = lowestSells;
-        this.LastTenFulfilledOrders = lastTenFulfilledOrders;
-        // this.Symbol = symbol;
+    public OrderBookSummary(List<OrderSummary> highestBuys, List<OrderSummary> lowestSells, String symbol, LinkedList<Order> lastTenFulfilledOrders) {
+        this.highestBuys = highestBuys;
+        this.lowestSells = lowestSells;
+        this.symbol = symbol;
+        this.lastTenFulfilledOrders = lastTenFulfilledOrders;
     }
 
-    // public String getSymbol() {
-    //     return Symbol;
-    // }
+    public String getSymbol() {
+        return symbol;
+    }   
 
     public static class OrderSummary {
-        public long Price;
-        public int CurrentQuantity;
-        public int OriginalQuantity;
+        public long price;
+        public int currentQuantity;
+        public int originalQuantity;
 
         public OrderSummary(long price, int currentQuantity, int originalQuantity) {
-            this.Price = price;
-            this.CurrentQuantity = currentQuantity;
-            this.OriginalQuantity = originalQuantity;
+            this.price = price;
+            this.currentQuantity = currentQuantity;
+            this.originalQuantity = originalQuantity;
+        }
+
+        public long getPrice() {
+            return price;
+        }
+
+        public int getCurrentQuantity() {
+            return currentQuantity;
+        }
+
+        public int getOriginalQuantity() {
+            return originalQuantity;
         }
     }
-
-
 }

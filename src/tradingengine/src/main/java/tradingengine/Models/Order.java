@@ -1,67 +1,62 @@
-package tradingengine.Models;
+package tradingengine.models;
+
+import java.sql.Timestamp;
+import java.util.UUID;
+
 
 public class Order {
+    public enum Side { BUY, SELL }
+    public enum OrderType { MARKET, LIMIT }
+    // public enum OrderStatus { NEW, FILLED, PARTIALLY_FILLED, CANCELLED }
 
-    public String OrderId;
-    public String Username;
-    public String OrderType;
-    public long Price;
-    public int CurrentQuantity;
-    public int OriginalQuantity;
+    private UUID orderId;
+    private String symbol; // Trading symbol/instrument
+    private String userId;
+    public String side;
+    public OrderType orderType;
+    private long price;
+    public int currentQuantity;
+    public int originalQuantity;
+    public Timestamp timestamp;
+    // public OrderStatus status;
 
-    public Order() {
-        this.OriginalQuantity = 0;
+    public Order(UUID orderId, String symbol, String userId, String side, OrderType orderType, int price, int quantity, Timestamp timestamp) {
+        this.orderId = orderId;
+        this.symbol = symbol;
+        this.userId = userId;
+        this.side = side;
+        this.orderType = orderType;
+        this.price = price;
+        this.currentQuantity = quantity;
+        this.originalQuantity = quantity;
+        this.timestamp = timestamp;
     }
-    
-    public Order(String orderId, String username, String isBuySide, long price, int quantity) {
-        this.OrderId = orderId;
-        this.Username = username;
-        this.OrderType = isBuySide;
-        this.Price = price;
-        this.CurrentQuantity= quantity;
-        this.OriginalQuantity = quantity;
+
+    public UUID getOrderId() {
+        return orderId;
     }
 
-    public String getOrderId() {
-        return this.OrderId;
+    public String getSymbol() {
+        return symbol;
+    }
+
+    public String getUserId() {
+        return userId;
     }
 
     public long getPrice() {
-        return this.Price;
+        return price;
+    }
+
+    public Timestamp getTimestamp() {
+        return timestamp;
     }
 
     public int getCurrentQuantity() {
-        return this.CurrentQuantity;
+        return currentQuantity;
     }
 
     public int getOriginalQuantity() {
-        return this.OriginalQuantity;
+        return originalQuantity;
     }
-
-    public void IncreaseQuantity(int quantityDelta) {
-        this.CurrentQuantity += quantityDelta;
-    }
-
-    public void DecreaseQuantity(int quantityDelta) {
-        if (quantityDelta > this.CurrentQuantity) {
-            throw new IllegalArgumentException("Cannot decrease quantity by more than current quantity for orderId = " + this.OrderId);
-        }
-        this.CurrentQuantity -= quantityDelta;
-    }
-
-    @Override
-    public String toString() {
-        return "OrderRequest{"
-            + "type="
-            + OrderType
-            + ", notionalAmount="
-            + CurrentQuantity
-            + ", originalNotionalAmount="
-            + OriginalQuantity
-            + ", price="
-            + Price
-            + '}';
-    }
-
-
 }
