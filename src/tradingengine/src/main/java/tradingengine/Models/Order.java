@@ -20,7 +20,7 @@ public class Order {
     public Timestamp timestamp;
     // public OrderStatus status;
 
-    public Order(UUID orderId, String symbol, String userId, String side, OrderType orderType, int price, int quantity, Timestamp timestamp) {
+    public Order(UUID orderId, String symbol, String userId, String side, OrderType orderType, long price, int quantity, Timestamp timestamp) {
         this.orderId = orderId;
         this.symbol = symbol;
         this.userId = userId;

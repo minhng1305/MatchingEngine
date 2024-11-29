@@ -1,44 +1,65 @@
 package tradingengine.services;
 
-import java.time.Duration;
-import java.util.Random;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
-import redis.clients.jedis.*;
-import tradingengine.jni.MatchingEngineJNI;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import tradingengine.models.Order;
+import tradingengine.models.OrderBookSummary;
+import tradingengine.models.Trade;
 
 @Service
 public class OrderService {
-    private final RedisTemplate<String, String> redisTemplate;
-    private final MatchingEngineJNI matchingEngineJNI;
-    private static final String REDIS_KEY_PREFIX = "order:";
-    private static final Duration ORDER_EXPIRATION = Duration.ofHours(24);
-    private static final String[] SYMBOLS = { "BTCUSD", "ETHUSD", "LTCUSD" };
-    private static final Random random = new Random();
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
+    private final ObjectMapper objectMapper;
+    private final Map<String, OrderBook> orderBooks;
 
-    public OrderService(RedisTemplate<String, String> redisTemplate, MatchingEngineJNI matchingEngineJNI) {
+    public OrderService(KafkaTemplate<String, String> kafkaTemplate, RedisTemplate<String, Object> redisTemplate) {
+        this.kafkaTemplate = kafkaTemplate;
         this.redisTemplate = redisTemplate;
-        this.matchingEngineJNI = matchingEngineJNI;
+        this.objectMapper = new ObjectMapper();
+        this.orderBooks = new ConcurrentHashMap<>();
     }
 
-    public void processOrder(Order order, long pointer) {
-        String redisKey = REDIS_KEY_PREFIX + order.getOrderId().toString();
-        Boolean isNewOrder = redisTemplate.opsForValue().setIfAbsent(redisKey, "1", ORDER_EXPIRATION);
-        if (Boolean.TRUE.equals(isNewOrder)) {
-            try {
-                System.out.println("Processing order for symbol: " + order.getSymbol());
-                if (pointer != -1)
-                    matchingEngineJNI.processOrder(pointer, order.getOrderId().toString(), order.side, order.getPrice(), order.getCurrentQuantity());
-                else
-                    System.out.println("Error: No order book found for symbol " + order.getSymbol());
-            } catch (Exception e) {
-                e.printStackTrace();
+    @KafkaListener(topics = "incoming-orders", groupId = "trading-engine-group")
+    public void processOrder(String orderJson) {
+        try {
+            Order order = objectMapper.readValue(orderJson, Order.class);
+            
+            // Get or create order book for symbol
+            OrderBook orderBook = orderBooks.computeIfAbsent(order.getSymbol(), symbol -> {
+                OrderBook newBook = new OrderBook();
+                newBook.setSymbol(symbol);
+                return newBook;
+            });
+
+            // Process order and get trades
+            List<Trade> trades = orderBook.addOrder(order);
+
+            // Store order book summary in Redis
+            OrderBookSummary summary = orderBook.getOrderBookSummary();
+            redisTemplate.opsForValue().set(
+                "orderbook:" + order.getSymbol(),
+                objectMapper.writeValueAsString(summary)
+            );
+
+            // Publish trades to Kafka
+            for (Trade trade : trades) {
+                String tradeJson = objectMapper.writeValueAsString(trade);
+                kafkaTemplate.send("executed-trades", tradeJson);
             }
-        } else {
-            System.out.println("Duplicated order: " + order.getOrderId());
+
+        } catch (Exception e) {
+            // Handle error
+            kafkaTemplate.send("error-events", "Error processing order: " + e.getMessage());
         }
     }
 }
