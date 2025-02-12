@@ -14,7 +14,7 @@ import org.springframework.kafka.core.ProducerFactory;
 
 @Configuration
 public class KafkaConfig {
-     @Bean
+    @Bean
     public ProducerFactory<String, String> producerFactory() {
         Map<String, Object> config = new HashMap<>();
         config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");

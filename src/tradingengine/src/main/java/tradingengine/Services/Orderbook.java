@@ -94,7 +94,8 @@ public class OrderBook {
         return new Trade(
                         buyOrder.getOrderId(), 
                         sellOrder.getOrderId(), 
-                        tradePrice, tradeQuantity, 
+                        tradePrice, 
+                        tradeQuantity, 
                         buyOrder.getOriginalQuantity(), 
                         sellOrder.getOriginalQuantity());
     }
