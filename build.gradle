@@ -18,11 +18,54 @@ repositories {
 }
 
 dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation('org.springframework.boot:spring-boot-starter-test')
+
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'org.mockito:mockito-junit-jupiter'
+
+	// JUnit 5 (Jupiter) dependencies
+	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.10.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.10.1'
+    testImplementation 'org.junit.platform:junit-platform-launcher:1.10.1'
+
+	// Lettuce (Redis)
+	compileOnly 'io.lettuce:lettuce-core:6.6.0.RELEASE'
+	implementation 'io.lettuce:lettuce-core:6.6.0.RELEASE'
+
+	// Spring Data Redis
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+	// Kafka dependencies
+	implementation 'org.springframework.kafka:spring-kafka'
 }
+
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+task runClass(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = project.hasProperty('mainClass') ? project.getProperty('mainClass') : 'com.project.matchingengine.Application'
+}
+
+// Enable preview features for Java 24
+tasks.withType(Test) {
+    jvmArgs += ['--enable-preview']
+}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs += ['--enable-preview']
+}
+
+// Add JVM arguments for module access
+tasks.withType(Test) {
+    jvmArgs += [
+        '--add-opens=java.base/java.lang=ALL-UNNAMED',
+        '--add-opens=java.base/java.util=ALL-UNNAMED',
+        '--add-exports=java.base/sun.reflect.annotation=ALL-UNNAMED'
+    ]
 }
