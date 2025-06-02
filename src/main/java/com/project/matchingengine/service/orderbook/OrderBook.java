@@ -1,13 +1,17 @@
-package com.project.matchingengine.service;
+package com.project.matchingengine.service.orderbook;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.PriorityQueue;
+import java.util.Queue;
 
 import org.springframework.stereotype.Service;
 
 import com.project.matchingengine.models.order.Order;
+import com.project.matchingengine.models.order.OrderBookSummary;
 import com.project.matchingengine.models.order.OrderSide;
 import com.project.matchingengine.models.order.OrderStatus;
 import com.project.matchingengine.models.order.Trade;
@@ -22,6 +26,7 @@ public class OrderBook {
     private PriorityQueue<Order> sellOrdersList;
     private ArrayList<Trade> trades;
     private double currentPrice;
+    private final Queue<Order> lastTenFulfilledOrders;
 
 
     public OrderBook(String symbol) {
@@ -33,6 +38,7 @@ public class OrderBook {
                                                             .thenComparing(Order::getOrderTimestamp));
         this.trades = new ArrayList<>();
         this.currentPrice = 0.0;
+        this.lastTenFulfilledOrders = new LinkedList<>();
     }
 
 
@@ -89,6 +95,7 @@ public class OrderBook {
         }
     }
 
+    
     public void matchSellOrder(Order sellOrder) {
         while (!buyOrdersList.isEmpty() && sellOrder.currentQuantity > 0) {
             Order buyOrder = buyOrdersList.peek();
@@ -121,7 +128,13 @@ public class OrderBook {
 
 
     public void processFullyFilledOrders(Order order) {
-        System.out.println("Order fully fulfilled and removed from " + order.getSide() + " side of order book: " + order.getOrderId());     
+        System.out.println("Order fully fulfilled and removed from " + order.getSide() + " side of order book: " + order.getOrderId());    
+        order.status = OrderStatus.FILLED; // Update the order status to fulfilled 
+
+        lastTenFulfilledOrders.offer(order); // Add the fulfilled order to the queue
+        if (lastTenFulfilledOrders.size() >= 10) {
+            lastTenFulfilledOrders.poll(); // Remove the oldest order if we already have 10
+        }
     }
 
 
@@ -135,10 +148,6 @@ public class OrderBook {
         ArrayList<Trade> recentTrades = new ArrayList<>(trades.subList(start, trades.size()));
         return recentTrades;
     }
-    
-    // public OrderBookSummery getOrderBookSummery() {
-
-    // }
 
 
     public double getCurrentPrice() {
@@ -149,13 +158,42 @@ public class OrderBook {
         return currentPrice;
     }
 
+
     public PriorityQueue<Order> getBuyOrdersList() {
         return buyOrdersList;
     }
+
 
     public PriorityQueue<Order> getSellOrdersList() {
         return sellOrdersList;
     }
 
 
+    public OrderBookSummary getOrderBookSummary() {
+        List<Order> topBuys = new ArrayList<>();
+        List<Order> lowestSells = new ArrayList<>();
+
+        // Get top 5 buy orders
+        PriorityQueue<Order> tempBuyOrders = new PriorityQueue<>(buyOrdersList);
+        for (int i = 0; i < 5 && !tempBuyOrders.isEmpty(); i++) {
+            topBuys.add(tempBuyOrders.poll());
+
+        } 
+        // Get lowest 5 sell orders 
+        PriorityQueue<Order> tempSellOrders = new PriorityQueue<>(sellOrdersList);
+        for (int i = 0; i < 5 && !tempSellOrders.isEmpty(); i++) {
+            lowestSells.add(tempSellOrders.poll());
+        }
+        return new OrderBookSummary(
+            this.symbol,
+            topBuys,
+            lowestSells,
+            getCurrentPrice(),
+            buyOrdersList.isEmpty() ? 0.0 : buyOrdersList.peek().getPrice(),
+            buyOrdersList.isEmpty() ? 0 : buyOrdersList.peek().getOriginalQuantity(),
+            sellOrdersList.isEmpty() ? 0.0 : sellOrdersList.peek().getPrice(),
+            sellOrdersList.isEmpty() ? 0 : sellOrdersList.peek().getOriginalQuantity(),
+            getMostRecent10Trades()
+        );
+    }
 }

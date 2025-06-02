@@ -8,7 +8,7 @@ import com.project.matchingengine.models.order.Order;
 import com.project.matchingengine.models.order.OrderSide;
 import com.project.matchingengine.models.order.OrderType;
 import com.project.matchingengine.models.order.Trade;
-import com.project.matchingengine.service.OrderBook;
+import com.project.matchingengine.service.orderbook.OrderBook;
 
 public class OrderBookVerification {
 
