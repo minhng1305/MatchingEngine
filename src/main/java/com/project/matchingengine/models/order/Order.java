@@ -1,10 +1,13 @@
 package com.project.matchingengine.models.order;
 
+import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.UUID;
 
 
-public class Order {    
+public class Order implements Serializable{    
+    private static final long serialVersionUID = 1L;
+
     private UUID orderId;
     private String symbol;
     private double price;

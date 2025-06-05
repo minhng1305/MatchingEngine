@@ -1,9 +1,12 @@
 package com.project.matchingengine.models.order;
 
+import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.UUID;
 
-public class Trade{    
+public class Trade implements Serializable {    
+    private static final long serialVersionUID = 1L;
+    
     public String symbol;
     public double price;
     public int quantity;

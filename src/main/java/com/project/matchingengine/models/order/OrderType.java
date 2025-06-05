@@ -1,9 +1,11 @@
 package com.project.matchingengine.models.order;
 
 
-public enum OrderType {
+public enum OrderType implements java.io.Serializable {
     LIMIT,
     MARKET;
+
+    private static final long serialVersionUID = 1L;
 
     public static OrderType fromString(String type) {
         if (type == null) {
