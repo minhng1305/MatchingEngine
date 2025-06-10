@@ -1,7 +1,7 @@
 package com.project.matchingengine.models.order;
 
 
-public enum OrderType {
+public enum OrderType{
     LIMIT,
     MARKET;
 

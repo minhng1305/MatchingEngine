@@ -5,6 +5,7 @@ import java.util.UUID;
 
 
 public class Order {    
+
     private UUID orderId;
     private String symbol;
     private double price;
@@ -17,6 +18,10 @@ public class Order {
     public OrderStatus status;
 
 
+    public Order() {
+        // Default constructor for serialization/deserialization
+    }
+    
     public Order(UUID orderId,
                  String symbol, 
                  double price, 
