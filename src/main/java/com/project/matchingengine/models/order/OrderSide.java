@@ -1,11 +1,9 @@
 package com.project.matchingengine.models.order;
 
 
-public enum OrderSide implements java.io.Serializable {
+public enum OrderSide {
     BUY,
     SELL;
-
-    private static final long serialVersionUID = 1L;
 
     public static OrderSide fromString(String side) {
         if (side == null) {

@@ -24,7 +24,7 @@ public class KafkaProducer {
     @Value("${app.kafka.topics.order-submission}")
     private String orderSubmissionTopic;
 
-    @Value("${app.kafka.topics.market-data-updates-topic}")
+    @Value("${app.kafka.topics.market-data-updates}")
     private String marketDataUpdatesTopic;
 
 
@@ -38,7 +38,7 @@ public class KafkaProducer {
         try {
             logger.info("Attempting Asynchronous send for Order: {}", order.getOrderId().toString());
 
-            String orderJson = objectMapper.writeValueAsString(order);
+            String orderJson = objectMapper.writeValueAsString(order);//
 
             CompletableFuture<SendResult<String, String>> future = kafkaTemplate.send(orderSubmissionTopic, order.getOrderId().toString(), orderJson);
 
