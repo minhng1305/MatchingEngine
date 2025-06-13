@@ -1,6 +1,7 @@
 package com.project.matchingengine.service.kafka;
 
 import java.util.ArrayList;
+import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,28 +19,38 @@ public class KafkaConsumer {
     private static final Logger logger = LoggerFactory.getLogger(KafkaConsumer.class);
     private final ObjectMapper objectMapper;
     private final OrderBookConfig orderBookConfig;
+    private CountDownLatch latch;
 
     public KafkaConsumer(ObjectMapper objectMapper,
                          OrderBookConfig orderBookConfig) {
         this.objectMapper = objectMapper;
         this.orderBookConfig = orderBookConfig;
     }
+
+    public void setLatch(CountDownLatch latch) {
+        this.latch = latch;
+    }
     
     @KafkaListener( id = "orderSubmissionListener", topics = "${app.kafka.topics.order-submission}", groupId = "${spring.kafka.consumer.group-id}" )
     public void processOrder(String orderJson) {
         try {
             Order order = objectMapper.readValue(orderJson, Order.class);
-            logger.info("Received Order: {}", order.getOrderId());
+            // logger.info("Received Order: {}", order.getOrderId());
             // pass the order to oderboook
             OrderBook orderBook = orderBookConfig.getOrCreateOrderBook(order.getSymbol());
             
 
             // can be deleted later
-            logger.info("Processing Order: {} ...", order.getOrderId());
-            orderBook.addOrder(order);
-            logger.info("Processed order: {}", order.getOrderId());
+            if (latch != null) {
+                latch.countDown();
+                // logger.info("   Remaining orders to receive: {}", latch.getCount());
+            }
 
-            printTrades(orderBook.getTrades());
+            // logger.info("Processing Order: {} ...", order.getOrderId());
+            orderBook.addOrder(order);
+            // logger.info("Processed order: {}", order.getOrderId());
+
+            // printTrades(orderBook.getTrades());
             logger.info("Price: {}", orderBook.getCurrentPrice());
 
         } catch (Exception e) {
