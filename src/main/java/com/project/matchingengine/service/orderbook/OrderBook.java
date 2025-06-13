@@ -8,8 +8,6 @@ import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
-import org.springframework.stereotype.Service;
-
 import com.project.matchingengine.models.order.Order;
 import com.project.matchingengine.models.order.OrderBookSummary;
 import com.project.matchingengine.models.order.OrderSide;
@@ -17,9 +15,7 @@ import com.project.matchingengine.models.order.OrderStatus;
 import com.project.matchingengine.models.order.Trade;
 
 
-
-// OrderBook class to manage the order book including order matching and trade execution
-@Service
+// @Service
 public class OrderBook {
     public String symbol;
     private PriorityQueue<Order> buyOrdersList;

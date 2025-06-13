@@ -1,54 +1,70 @@
 package com.project.matchingengine.service.kafka;
 
+import java.util.ArrayList;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.project.matchingengine.config.OrderBookConfig;
 import com.project.matchingengine.models.order.Order;
-
-
-
-
+import com.project.matchingengine.models.order.Trade;
+import com.project.matchingengine.service.orderbook.OrderBook;
 
 @Service
 public class KafkaConsumer {
-
-    private final ObjectMapper objectMapper;
     private static final Logger logger = LoggerFactory.getLogger(KafkaConsumer.class);
+    private final ObjectMapper objectMapper;
+    private final OrderBookConfig orderBookConfig;
 
-    // @Value("${app.kafka.topics.order-submission}")
-    // private static final String orderSubmissionTopic;
-
-    // @Value("${spring.kafka.consumer.group-id}")
-    // private static final String consumerGroupId;
-
-    public KafkaConsumer(ObjectMapper objectMapper) {
+    public KafkaConsumer(ObjectMapper objectMapper,
+                         OrderBookConfig orderBookConfig) {
         this.objectMapper = objectMapper;
-    }
-
-    @KafkaListener(topics = "test", groupId = "myGroup")
-    public void listen(String message) {
-        logger.warn("This is a Secret message " + message);
+        this.orderBookConfig = orderBookConfig;
     }
     
     @KafkaListener( id = "orderSubmissionListener", topics = "${app.kafka.topics.order-submission}", groupId = "${spring.kafka.consumer.group-id}" )
     public void processOrder(String orderJson) {
-        // Logic to consume the order from Kafka
-        // This could involve deserializing the order, processing it, etc.);
         try {
-            Order order = objectMapper.readValue(orderJson, Order.class);//
-            System.out.println("Received Order: " + order.getOrderId());
+            Order order = objectMapper.readValue(orderJson, Order.class);
+            logger.info("Received Order: {}", order.getOrderId());
+            // pass the order to oderboook
+            OrderBook orderBook = orderBookConfig.getOrCreateOrderBook(order.getSymbol());
+            
+
+            // can be deleted later
+            logger.info("Processing Order: {} ...", order.getOrderId());
+            orderBook.addOrder(order);
+            logger.info("Processed order: {}", order.getOrderId());
+
+            printTrades(orderBook.getTrades());
+            logger.info("Price: {}", orderBook.getCurrentPrice());
+
         } catch (Exception e) {
             logger.error("Failed to process order from Kafka: {}", e.getMessage(), e);
         }
-
     }
 
-    // @KafkaListener(topics = "test-topic", groupId = "myGroup")
-    // public void listen(String message) {
-    //     System.out.println("Received message: " + message);
-    //     logger.warn("This is a Secret message " + message);
-    // }
+    private static void printTrades(ArrayList<Trade> trades) {
+        if (trades.isEmpty()) {
+            System.out.println("No trades executed");
+            return;
+        }
+        
+        for (int i = 0; i < trades.size(); i++) {
+            Trade trade = trades.get(i);
+            // logger.info("Trade " + (i + 1) + ": " + trade.symbol + 
+            //                    " || Price: " + trade.price + 
+            //                    " || Quantity: " + trade.quantity + 
+            //                    " || Buy Order: " + trade.getBuyOrderId() + 
+            //                    " || Sell Order: " + trade.getSellOrderId() +
+            //                    " || Timestamp: " + trade.tradeTimestamp);
+
+            logger.info("Trade {}: {} || Price: {} || Quantity: {} || Buy Order: {} || Sell Order: {} || Timestamp: {}",
+                    i + 1, trade.symbol, trade.price, trade.quantity, 
+                    trade.getBuyOrderId(), trade.getSellOrderId(), trade.tradeTimestamp);
+        }
+    }
 }
