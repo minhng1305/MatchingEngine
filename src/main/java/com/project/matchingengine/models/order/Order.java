@@ -8,6 +8,7 @@ public class Order implements java.io.Serializable {
 
     private static final long serialVersionUID = 1L;
     private UUID orderId;
+    private String userId;
     private String symbol;
     private double price;
     private int originalQuantity;
@@ -24,6 +25,7 @@ public class Order implements java.io.Serializable {
     }
     
     public Order(UUID orderId,
+                 String userId,
                  String symbol, 
                  double price, 
                  int originalQuantity, 
@@ -32,6 +34,7 @@ public class Order implements java.io.Serializable {
                  double limitPrice, 
                  Timestamp orderTimestamp) {
         this.orderId = orderId;
+        this.userId = userId;
         this.symbol = symbol;
         this.price = price;
         this.currentQuantity = originalQuantity;

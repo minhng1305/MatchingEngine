@@ -5,6 +5,7 @@ import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
@@ -13,18 +14,23 @@ import com.project.matchingengine.config.OrderBookConfig;
 import com.project.matchingengine.models.order.Order;
 import com.project.matchingengine.models.order.Trade;
 import com.project.matchingengine.service.orderbook.OrderBook;
+import com.project.matchingengine.service.websocket.WebSocketNotificationService;
 
 @Service
 public class KafkaConsumer {
     private static final Logger logger = LoggerFactory.getLogger(KafkaConsumer.class);
     private final ObjectMapper objectMapper;
     private final OrderBookConfig orderBookConfig;
+    private final WebSocketNotificationService notificationService;
     private CountDownLatch latch;
 
+    @Autowired 
     public KafkaConsumer(ObjectMapper objectMapper,
-                         OrderBookConfig orderBookConfig) {
+                         OrderBookConfig orderBookConfig,
+                         WebSocketNotificationService notificationService) {
         this.objectMapper = objectMapper;
         this.orderBookConfig = orderBookConfig;
+        this.notificationService = notificationService;
     }
 
     public void setLatch(CountDownLatch latch) {
@@ -39,20 +45,18 @@ public class KafkaConsumer {
             // pass the order to oderboook
             OrderBook orderBook = orderBookConfig.getOrCreateOrderBook(order.getSymbol());
             
+            // if (order.status == OrderStatus.PARTIALLY_FILLED ||order.status == OrderStatus.FILLED ){
+            //     notificationService.sendTradeNotificationToUser(trade);
+            // }
 
             // can be deleted later
             if (latch != null) {
                 latch.countDown();
-                // logger.info("   Remaining orders to receive: {}", latch.getCount());
             }
 
-            // logger.info("Processing Order: {} ...", order.getOrderId());
             orderBook.addOrder(order);
-            // logger.info("Processed order: {}", order.getOrderId());
-
-            // printTrades(orderBook.getTrades());
             logger.info("Price: {}", orderBook.getCurrentPrice());
-
+            notificationService.broadcastOrderBookUpdate(orderBook.getOrderBookSummary());
         } catch (Exception e) {
             logger.error("Failed to process order from Kafka: {}", e.getMessage(), e);
         }

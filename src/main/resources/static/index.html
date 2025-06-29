@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Matching Engine</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding: 20px; }
+        #order-form { margin-bottom: 20px; }
+        .trade-history, .market-data { margin-top: 20px; }
+        .buy { color: green; }
+        .sell { color: red; }
+        /* Style for long UUIDs to prevent table stretching */
+        td { word-break: break-all; } 
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="text-center">Trading Terminal</h2>
+
+        <div id="order-form">
+            <!-- Title updated to show the fixed symbol -->
+            <h3>Submit Order (Symbol: AAPL)</h3>
+            <form id="orderSubmitForm">
+                <div class="form-row">
+                    <!-- Order ID input has been removed -->
+                    <div class="form-group col-md-4">
+                        <label for="side">Side</label>
+                        <select id="side" class="form-control" required>
+                            <option selected>BUY</option>
+                            <option>SELL</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="price">Price</label>
+                        <!-- Added step="0.01" for better UX with currency -->
+                        <input type="number" step="0.01" class="form-control" id="price" placeholder="Price" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="quantity">Quantity</label>
+                        <input type="number" class="form-control" id="quantity" placeholder="Quantity" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit Order</button>
+            </form>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="trade-history">
+                    <h3>My Trade History</h3>
+                    <!-- Table headers updated to match the Trade.java model -->
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Buy Order ID</th>
+                                <th>Sell Order ID</th>
+                                <th>Price</th>
+                                <th>Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trade-history-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="market-data">
+                    <h3>Market Data (Order Book)</h3>
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Price</th>
+                                <th>Quantity</th>
+                                <th>Side</th>
+                            </tr>
+                        </thead>
+                        <tbody id="market-data-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script src="/app.js"></script>
+</body>
+</html>
