@@ -50,6 +50,10 @@ public class Order implements java.io.Serializable {
         return orderId;
     }
 
+    public String getUserId() {
+        return userId;
+    }
+
     public String getSymbol() {
         return symbol;
     }

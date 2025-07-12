@@ -15,26 +15,46 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer  {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
+        // Enable a simple memory-based message broker to carry messages
         config.enableSimpleBroker("/topic", "/queue");
+        // Prefix for messages bound for @MessageMapping methods
         config.setApplicationDestinationPrefixes("/app");
+        // Prefix for user-specific destinations
         config.setUserDestinationPrefix("/user");
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // Registers the "/gs-guide-websocket" endpoint, enabling STOMP over WebSocket. [2]
-        // This is the path clients will use to connect to the WebSocket server. [1]
-        // withSockJS() provides fallback options for browsers that don't support WebSocket.
-        registry.addEndpoint("/ws").withSockJS();
+        // registry.addEndpoint("/ws").withSockJS();
+
+        // Register STOMP endpoint
+        registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns("*")
+                .withSockJS();
     }
-    
-    // Example:
-    // @Configuration
-    // @EnableWebSocket
-    // public class WebSocketConfig implements WebSocketConfigurer {
-    //     @Override
-    //     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-    //         registry.addHandler(new YourWebSocketHandler(), "/ws-endpoint");
-    //     }
+
+    // @Override
+    // public void configureMessageBroker(MessageBrokerRegistry config) {
+    //     // Enable simple broker for destinations prefixed with "/topic" and "/queue"
+    //     config.enableSimpleBroker("/topic", "/queue")
+    //           .setHeartbeatValue(new long[]{10000, 20000})
+    //           .setTaskScheduler(null); // Use default task scheduler
+        
+    //     // Set prefix for messages bound for @MessageMapping methods
+    //     config.setApplicationDestinationPrefixes("/app");
+        
+    //     // Set prefix for user-specific destinations
+    //     config.setUserDestinationPrefix("/user");
+    // }
+
+    // @Override
+    // public void registerStompEndpoints(StompEndpointRegistry registry) {
+    //     // Register STOMP endpoint with SockJS support
+    //     registry.addEndpoint("/ws")
+    //             .setAllowedOriginPatterns("*")
+    //             .withSockJS()
+    //             .setWebSocketEnabled(true)
+    //             .setHttpMessageCacheSize(1000)
+    //             .setDisconnectDelay(30 * 1000);
     // }
 }
