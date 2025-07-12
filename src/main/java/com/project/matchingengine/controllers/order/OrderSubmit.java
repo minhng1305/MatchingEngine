@@ -1,10 +1,12 @@
 package com.project.matchingengine.controllers.order;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.matchingengine.models.order.Order;
@@ -12,8 +14,9 @@ import com.project.matchingengine.service.kafka.KafkaProducer;
 
 
 @RequestMapping("/api/orders")
-@RestController
+@Controller
 public class OrderSubmit {
+    private static final Logger logger = LoggerFactory.getLogger(OrderSubmit.class);
     private final ObjectMapper objectMapper;
     private final KafkaProducer kafkaProducer;
 
@@ -23,13 +26,19 @@ public class OrderSubmit {
         this.kafkaProducer = kafkaProducer;
     }
 
-    @PostMapping("/order-submit")
-    public ResponseEntity<String> submitOrder(Order order) {
+     // This method will now handle messages sent to the "/app/order-submit" destination
+    @MessageMapping("/submit-order")
+    public void submitOrder(@Payload Order order) {
         try {
+            // if (order.getUserId() == null || order.getUserId().isEmpty()) {
+            //     logger.error("Order received without a userId. Cannot process.");
+            //     return; // Or throw an exception
+            // }
+            logger.info("Received Order via WebSocket: {}. Sending to Kafka...", order.getOrderId());
             kafkaProducer.sendOrder(order);
-            return ResponseEntity.ok("Order submitted to Kafka successfully! Order ID: " + order.getOrderId().toString());
+            logger.info("=> Sent Order to Kafka: {}", order.getOrderId());
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("Failed to submit order: " + e.getMessage());
+            logger.error("Failed to submit order from WebSocket to Kafka: {}", e.getMessage(), e);
         }
     }
 }

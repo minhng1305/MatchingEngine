@@ -14,6 +14,9 @@ java -cp build/classes/java/main com.project.matchingengine.RedisLettuceConnectT
 # To test the orderbook data structure
 java -cp build/classes/java/main com.project.matchingengine.OrderBookVerification
 
+# build
+./gradlew clean build   
+
 # Run the application
 ./gradlew bootRun
 
@@ -31,9 +34,6 @@ bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
 
 # pretty
 ./gradlew :spotlessApply
-
-# build
-./gradlew clean build   
 
 # sql
 brew services start postgresql

@@ -20,7 +20,6 @@ repositories {
 
 dependencies {
 	api 'org.apache.httpcomponents:httpclient:4.5.7'
-    // implementation 'org.apache.commons:commons-lang3:3.5'
 
 	implementation 'org.springframework.boot:spring-boot-starter'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -45,14 +44,28 @@ dependencies {
 
 	// Kafka dependencies
 	implementation 'org.springframework.kafka:spring-kafka'
-	// implementation 'org.apache.kafka:kafka-clients:3.0.0'
-	// implementation("org.springframework.kafka:spring-kafka:3.0.8")
 
-	// testImplementation 'org.mockito:mockito-core:latest.release'
 	testImplementation 'org.assertj:assertj-core:3.17.2'
-    // testImplementation 'org.mockito:mockito-core:3.5.13'
 	testImplementation "org.mockito:mockito-core:5.+"
-}
+
+	// Spring Boot WebSocket
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+	implementation 'org.springframework:spring-messaging'
+    implementation 'org.springframework:spring-websocket'
+	implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+	// PosgresSQL dependencies
+	// implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+  	// implementation 'org.postgresql:postgresql'
+
+	// Security dependencies
+	ximplementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+
+	implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6:3.1.2.RELEASE'
+	testImplementation 'org.springframework.security:spring-security-test'
+	}
 
 
 tasks.named('test') {
