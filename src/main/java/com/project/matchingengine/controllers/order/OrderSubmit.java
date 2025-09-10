@@ -3,18 +3,24 @@ package com.project.matchingengine.controllers.order;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.ui.Model;
+
+import java.util.UUID;
+import java.sql.Timestamp;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.matchingengine.models.order.Order;
 import com.project.matchingengine.service.kafka.KafkaProducer;
 
-
-@RequestMapping("orders")
+// TODO: Convert this to the PRG (Post/Redirect/Get) pattern with RESTful URLs
 @Controller
+@RequestMapping("orders")
 public class OrderSubmit {
     private static final Logger logger = LoggerFactory.getLogger(OrderSubmit.class);
     private final ObjectMapper objectMapper;
@@ -26,19 +32,28 @@ public class OrderSubmit {
         this.kafkaProducer = kafkaProducer;
     }
 
-     // This method will now handle messages sent to the "/app/order-submit" destination
-    @MessageMapping("app/submit-order")
-    public void submitOrder(@Payload Order order) {
+    @GetMapping("orderForm")
+    public String getOrderForm(Model model) {
+        model.addAttribute("order", new Order());
+        return "orderForm.html";
+    }
+
+    @PostMapping("submitOrder")
+    public String submitOrder(@ModelAttribute @Payload Order order, Model model) {
         try {
-            // if (order.getUserId() == null || order.getUserId().isEmpty()) {
-            //     logger.error("Order received without a userId. Cannot process.");
-            //     return; // Or throw an exception
-            // }
-            logger.info("Received Order via WebSocket: {}. Sending to Kafka...", order.getOrderId());
+            order.setOrderId(UUID.randomUUID());
+            order.setOrderTimestamp(new Timestamp(System.currentTimeMillis()));
+
+            System.out.println(order);
+            logger.info("Received Order: {}. Sending to Kafka...", order.getOrderId());
             kafkaProducer.sendOrder(order);
             logger.info("=> Sent Order to Kafka: {}", order.getOrderId());
+
+            model.addAttribute("order", order);
+            return "orderSubmitSuccess.html";
         } catch (Exception e) {
             logger.error("Failed to submit order from WebSocket to Kafka: {}", e.getMessage(), e);
+            return "orderSubmitError.html";
         }
     }
 }

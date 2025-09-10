@@ -122,7 +122,7 @@ public class OrderBook {
 
 
     public void processFullyFilledOrders(Order order) {
-        System.out.println("Order fully fulfilled and removed from " + order.getSide() + " side of order book: " + order.getOrderId());    
+        System.out.println(symbol + " - Order fully fulfilled and removed from " + order.getSide() + " side of order book: " + order.getOrderId());
         order.status = OrderStatus.FILLED;
 
         lastTenFulfilledOrders.offer(order);

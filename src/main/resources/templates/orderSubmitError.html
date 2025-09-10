@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Order Submission Error</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+          crossorigin="anonymous">
+    <style>
+        .error-card {
+            max-width: 600px;
+            margin: 0 auto;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        .error-icon {
+            font-size: 5rem;
+            color: #dc3545;
+        }
+        .card-header {
+            background-color: #f8f9fa;
+        }
+        .navbar-brand {
+            font-weight: 600;
+        }
+        .error-details {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            border-left: 4px solid #dc3545;
+        }
+        .error-code {
+            color: #6c757d;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <a class="navbar-brand fs-2" href="#">Trading Platform</a>
+        <button class="navbar-toggler" type="button"
+                data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false"
+                aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="#">Dashboard</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Orders</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Portfolio</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card error-card">
+                <div class="card-header text-center py-3 bg-danger text-white">
+                    <h2 class="mb-0 fs-3">Order Submission Failed</h2>
+                </div>
+                <div class="card-body text-center">
+                    <div class="my-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" fill="currentColor" class="bi bi-exclamation-circle-fill error-icon" viewBox="0 0 16 16">
+                            <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8 4a.905.905 0 0 0-.9.995l.35 3.507a.552.552 0 0 0 1.1 0l.35-3.507A.905.905 0 0 0 8 4zm.002 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+                        </svg>
+                    </div>
+
+                    <p class="lead mb-4">We couldn't process your order due to an error.</p>
+
+                    <div class="error-details mb-4 text-start">
+                        <h5>Error Details:</h5>
+                        <p id="error-message">Insufficient funds available in your account to place this order.</p>
+                        <p class="error-code mb-0">Error Code: <span id="error-code">ERR-5102</span></p>
+                    </div>
+
+                    <div class="attempted-order mt-4 mb-4 text-start">
+                        <h5>Attempted Order:</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Symbol:</strong> <span id="symbol">AAPL</span></p>
+                                <p><strong>Side:</strong> <span id="side">BUY</span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Type:</strong> <span id="type">LIMIT</span></p>
+                                <p><strong>Quantity:</strong> <span id="quantity">100</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="possible-solutions mb-4 text-start">
+                        <h5>Possible Solutions:</h5>
+                        <ul>
+                            <li>Check your account balance and ensure sufficient funds are available.</li>
+                            <li>Verify that you have the proper permissions to trade this security.</li>
+                            <li>Confirm that the market is open for the selected symbol.</li>
+                            <li>Try reducing the order quantity.</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <a href="@{/orders/orderForm}" class="btn btn-primary me-md-2">Try Again</a>
+                        <a href="#" class="btn btn-outline-secondary">Contact Support</a>
+                    </div>
+                </div>
+                <div class="card-footer text-center py-3">
+                    <p class="mb-0">If you need assistance, please contact our support team at <a href="mailto:support@tradingplatform.com">support@tradingplatform.com</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+        crossorigin="anonymous"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get error details from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+
+        // Common error messages based on error code
+        const errorMessages = {
+            'ERR-5101': 'Invalid order parameters. Please check your inputs and try again.',
+            // 'ERR-5102': 'Insufficient funds available in your account to place this order.',
+            'ERR-5103': 'Market is currently closed for the selected symbol.',
+            'ERR-5104': 'Trading limit exceeded. Please reduce your order quantity.',
+            'ERR-5105': 'System is currently unavailable. Please try again later.'
+        };
+
+        // If parameters exist, update the display
+        if(urlParams.has('errorCode')) {
+            const errorCode = urlParams.get('errorCode');
+            document.getElementById('error-code').textContent = errorCode;
+
+            if(errorMessages[errorCode]) {
+                document.getElementById('error-message').textContent = errorMessages[errorCode];
+            }
+        }
+
+        if(urlParams.has('symbol')) {
+            document.getElementById('symbol').textContent = urlParams.get('symbol');
+        }
+
+        if(urlParams.has('side')) {
+            document.getElementById('side').textContent = urlParams.get('side');
+        }
+
+        if(urlParams.has('type')) {
+            document.getElementById('type').textContent = urlParams.get('type');
+        }
+
+        if(urlParams.has('quantity')) {
+            document.getElementById('quantity').textContent = urlParams.get('quantity');
+        }
+    });
+</script>
+</body>
+</html>

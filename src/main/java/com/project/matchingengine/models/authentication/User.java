@@ -1,8 +1,15 @@
 package com.project.matchingengine.models.authentication;
 
 import java.util.UUID;
+import jakarta.persistence.Entity;
 
+import jakarta.persistence.Table;
+import org.springframework.data.annotation.Id;
+
+@Entity
+@Table(name = "users")
 public class User {
+    @Id
     private UUID userId;
     private String password;
     private String email;

@@ -60,42 +60,6 @@ public class KafkaProducer {
         }
     }
 
-
-    // public void sendOrderBookSummary(OrderBookSummary orderBookSummary) {
-    //     try {
-    //         String summaryJson = objectMapper.writeValueAsString(orderBookSummary);
-
-    //         CompletableFuture<SendResult<String, String>> future = kafkaTemplate.send(marketDataUpdatesTopic, orderBookSummary.symbol, summaryJson);
-            
-    //         future.whenComplete((result, ex) -> {
-    //             if (ex == null) {
-    //                 logger.info("Asynchronous Send (SUCCESS): Order {} sent to partition {} at offset {}",
-    //                         orderBookSummary.symbol,
-    //                         result.getRecordMetadata().partition(),
-    //                         result.getRecordMetadata().offset());
-    //             } else {
-    //                 logger.error("Asynchronous Send (FAILURE): Failed to send order {}: {}",
-    //                             orderBookSummary.symbol, ex.getMessage(), ex);
-    //             }
-    //         });
-    //         logger.info("Order book summary sent for symbol: {}", orderBookSummary.symbol);
-            
-    //     } catch (JsonProcessingException e) {
-    //         logger.error("Failed to serialize order book summary", e);
-    //         throw new RuntimeException("Failed to send order book summary", e);
-    //     }
-    // }
-
-    // public void sendMessage(String topic, String key, String value) {
-    //     try {
-    //         System.out.println("Sending message to Kafka topic: " + topic + " with key: " + key + " and value: " + value);
-    //         kafkaTemplate.send(topic, key, value);
-    //         System.out.println("Message sent successfully to Kafka topic: " + topic);
-    //     } catch (Exception e) {
-    //         throw new RuntimeException("Failed to send message to Kafka", e);
-    //     }
-    // }
-
     public void flushProducer() {
         kafkaTemplate.flush();
         logger.info("Kafka Producer flushed.");

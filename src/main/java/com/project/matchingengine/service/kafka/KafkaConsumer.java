@@ -41,7 +41,7 @@ public class KafkaConsumer {
     public void processOrder(String orderJson) {
         try {
             Order order = objectMapper.readValue(orderJson, Order.class);
-            // logger.info("Received Order: {}", order.getOrderId());
+
             // pass the order to oderboook
             OrderBook orderBook = orderBookConfig.getOrCreateOrderBook(order.getSymbol());
             
@@ -70,12 +70,12 @@ public class KafkaConsumer {
         
         for (int i = 0; i < trades.size(); i++) {
             Trade trade = trades.get(i);
-            // logger.info("Trade " + (i + 1) + ": " + trade.symbol + 
-            //                    " || Price: " + trade.price + 
-            //                    " || Quantity: " + trade.quantity + 
-            //                    " || Buy Order: " + trade.getBuyOrderId() + 
-            //                    " || Sell Order: " + trade.getSellOrderId() +
-            //                    " || Timestamp: " + trade.tradeTimestamp);
+            logger.info("Trade " + (i + 1) + ": " + trade.symbol +
+                                " || Price: " + trade.price +
+                                " || Quantity: " + trade.quantity +
+                                " || Buy Order: " + trade.getBuyOrderId() +
+                                " || Sell Order: " + trade.getSellOrderId() +
+                                " || Timestamp: " + trade.tradeTimestamp);
 
             logger.info("Trade {}: {} || Price: {} || Quantity: {} || Buy Order: {} || Sell Order: {} || Timestamp: {}",
                     i + 1, trade.symbol, trade.price, trade.quantity, 
