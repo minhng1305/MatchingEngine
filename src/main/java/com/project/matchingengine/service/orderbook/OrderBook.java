@@ -18,9 +18,9 @@ import com.project.matchingengine.models.order.Trade;
 // @Service
 public class OrderBook {
     public String symbol;
-    private PriorityQueue<Order> buyOrdersList;
-    private PriorityQueue<Order> sellOrdersList;
-    private ArrayList<Trade> trades;
+    private final PriorityQueue<Order> buyOrdersList;
+    private final PriorityQueue<Order> sellOrdersList;
+    private final ArrayList<Trade> trades;
     private double currentPrice;
     private final Queue<Order> lastTenFulfilledOrders;
 
@@ -55,7 +55,7 @@ public class OrderBook {
             }
         }
         if (!trades.isEmpty()) {
-            this.currentPrice = trades.get(trades.size() - 1).price; // Update current price to the last trade price
+            this.currentPrice = trades.get(trades.size() - 1).price;
         }
     }
 
@@ -107,17 +107,15 @@ public class OrderBook {
                                         new Timestamp(System.currentTimeMillis()));
                 trades.add(trade);
 
-                // Update quantities
                 sellOrder.currentQuantity -= tradeQuantity;
                 buyOrder.currentQuantity -= tradeQuantity;
 
-                // Remove the buy order if fully filled
                 if (buyOrder.currentQuantity == 0) {
                     processFullyFilledOrders(buyOrder); 
                     buyOrdersList.poll();
                 }
             } else {
-                break; // No more matches possible
+                break;
             }
         }
     }
@@ -125,11 +123,11 @@ public class OrderBook {
 
     public void processFullyFilledOrders(Order order) {
         System.out.println("Order fully fulfilled and removed from " + order.getSide() + " side of order book: " + order.getOrderId());    
-        order.status = OrderStatus.FILLED; // Update the order status to fulfilled 
+        order.status = OrderStatus.FILLED;
 
-        lastTenFulfilledOrders.offer(order); // Add the fulfilled order to the queue
+        lastTenFulfilledOrders.offer(order);
         if (lastTenFulfilledOrders.size() >= 10) {
-            lastTenFulfilledOrders.poll(); // Remove the oldest order if we already have 10
+            lastTenFulfilledOrders.poll();
         }
     }
 
@@ -141,8 +139,7 @@ public class OrderBook {
 
     public ArrayList<Trade> getMostRecent10Trades() {
         int start = Math.max(0, trades.size() - 10);
-        ArrayList<Trade> recentTrades = new ArrayList<>(trades.subList(start, trades.size()));
-        return recentTrades;
+        return new ArrayList<>(trades.subList(start, trades.size()));
     }
 
 

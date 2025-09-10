@@ -13,7 +13,7 @@ import com.project.matchingengine.models.order.Order;
 import com.project.matchingengine.service.kafka.KafkaProducer;
 
 
-@RequestMapping("/api/orders")
+@RequestMapping("orders")
 @Controller
 public class OrderSubmit {
     private static final Logger logger = LoggerFactory.getLogger(OrderSubmit.class);
@@ -27,7 +27,7 @@ public class OrderSubmit {
     }
 
      // This method will now handle messages sent to the "/app/order-submit" destination
-    @MessageMapping("/submit-order")
+    @MessageMapping("app/submit-order")
     public void submitOrder(@Payload Order order) {
         try {
             // if (order.getUserId() == null || order.getUserId().isEmpty()) {
