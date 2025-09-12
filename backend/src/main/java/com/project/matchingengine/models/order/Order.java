@@ -2,22 +2,56 @@ package com.project.matchingengine.models.order;
 
 import java.sql.Timestamp;
 import java.util.UUID;
+import java.util.Objects;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
+import jakarta.persistence.Id;
+import jakarta.persistence.Column;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 
 
-public class Order implements java.io.Serializable {    
-
+@Entity
+@Table(name = "orders")
+public class Order implements java.io.Serializable {
     private static final long serialVersionUID = 1L;
+
+    @Id
     private UUID orderId;
+
+    @Column(name = "user_id", nullable = false)
     private String userId;
+
+    @Column(nullable = false)
     private String symbol;
+
+    @Column(nullable = false)
     private double price;
+
+    @Column(name = "original_quantity", nullable = false)
     private int originalQuantity;
-    public int currentQuantity;
+
+    @Column(name = "current_quantity", nullable = false)
+    private int currentQuantity;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "side")
     private OrderSide side;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type")
     private OrderType type;
+
+    @Column(name = "limit_price", nullable = false)
     private double limitPrice;
+
+    @Column(name = "order_timestamp", nullable = false)
     private Timestamp orderTimestamp;
-    public OrderStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private OrderStatus status;
 
 
     public Order() {
@@ -86,6 +120,14 @@ public class Order implements java.io.Serializable {
         this.originalQuantity = originalQuantity;
     }
 
+    public int getCurrentQuantity() {
+        return currentQuantity;
+    }
+
+    public void setCurrentQuantity(int currentQuantity) {
+        this.currentQuantity = currentQuantity;
+    }
+
     public OrderSide getSide() {
         return side;
     }
@@ -110,11 +152,32 @@ public class Order implements java.io.Serializable {
         this.limitPrice = limitPrice;
     }
 
+    public OrderStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(OrderStatus status) {
+        this.status = status;
+    }
+
     public Timestamp getOrderTimestamp() {
         return orderTimestamp;
     }
 
     public void setOrderTimestamp(Timestamp orderTimestamp) {
         this.orderTimestamp = orderTimestamp;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Order order = (Order) o;
+        return Objects.equals(orderId, order.orderId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(orderId);
     }
 }

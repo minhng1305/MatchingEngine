@@ -4,13 +4,29 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
+
 @SpringBootApplication
 public class Application {
     public static void main(String[] args) {
+        try {
+			String url = "jdbc:postgresql://localhost:5432/MatchingEngine";
+			String uname = "postgres";
+			String pass = "A@13052004b";
+			// Class.forName("org.postgresql.Driver");
+			Connection con = DriverManager.getConnection(url, uname, pass);
+			System.out.println("Connection established");
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
         SpringApplication.run(Application.class, args);
     }
     

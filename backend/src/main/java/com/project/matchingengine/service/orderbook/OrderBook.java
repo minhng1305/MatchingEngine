@@ -17,12 +17,13 @@ import com.project.matchingengine.models.order.Trade;
 
 // @Service
 public class OrderBook {
-    public String symbol;
+    private String symbol;
     private final PriorityQueue<Order> buyOrdersList;
     private final PriorityQueue<Order> sellOrdersList;
     private final ArrayList<Trade> trades;
     private double currentPrice;
     private final Queue<Order> lastTenFulfilledOrders;
+    private OrderService orderService;
 
 
     public OrderBook(String symbol) {
@@ -41,32 +42,35 @@ public class OrderBook {
     public void addOrder(Order order) {
         if (order.getSide() == OrderSide.BUY) {
             matchBuyOrder(order);
-            if (order.currentQuantity > 0) {
+            if (order.getCurrentQuantity() > 0) {
                 buyOrdersList.add(order);
+                orderService.updateOrder(order);
             } else {
                 processFullyFilledOrders(order);
             }
         } else {
             matchSellOrder(order);
-            if (order.currentQuantity > 0) {
+            if (order.getCurrentQuantity() > 0) {
                 sellOrdersList.add(order);
+                orderService.updateOrder(order);
             } else {
                 processFullyFilledOrders(order);
+                orderService.removeOrder(order.getOrderId());
             }
         }
         if (!trades.isEmpty()) {
-            this.currentPrice = trades.get(trades.size() - 1).price;
+            this.currentPrice = trades.get(trades.size() - 1).getPrice();
         }
     }
 
 
     public void matchBuyOrder(Order buyOrder) {
-        while (!sellOrdersList.isEmpty() && buyOrder.currentQuantity > 0) {
+        while (!sellOrdersList.isEmpty() && buyOrder.getCurrentQuantity() > 0) {
             Order sellOrder = sellOrdersList.peek();
             if (buyOrder.getPrice() >= sellOrder.getPrice()) {
-                // Execute trade
-                buyOrder.status = OrderStatus.PARTIALLY_FILLED;
-                int tradeQuantity = Math.min(buyOrder.currentQuantity, sellOrder.currentQuantity);
+
+                buyOrder.setStatus(OrderStatus.PARTIALLY_FILLED);
+                int tradeQuantity = Math.min(buyOrder.getCurrentQuantity(), sellOrder.getCurrentQuantity());
                 double tradePrice = sellOrder.getPrice();
                 Trade trade = new Trade(this.symbol, 
                                         tradePrice, 
@@ -76,29 +80,27 @@ public class OrderBook {
                                         new Timestamp(System.currentTimeMillis()));
                 trades.add(trade);
 
-                // Update quantities
-                buyOrder.currentQuantity -= tradeQuantity;
-                sellOrder.currentQuantity -= tradeQuantity;
+                buyOrder.setCurrentQuantity(buyOrder.getCurrentQuantity() - tradeQuantity);
+                sellOrder.setCurrentQuantity(sellOrder.getCurrentQuantity() - tradeQuantity);
 
-                // Remove the sell order if fully filled
-                if (sellOrder.currentQuantity == 0) {
+                if (sellOrder.getCurrentQuantity() == 0) {
                     processFullyFilledOrders(sellOrder);
                     sellOrdersList.poll();
                 }
             } else {
-                break; // No more matches possible
+                break;
             }
         }
     }
 
     
     public void matchSellOrder(Order sellOrder) {
-        while (!buyOrdersList.isEmpty() && sellOrder.currentQuantity > 0) {
+        while (!buyOrdersList.isEmpty() && sellOrder.getCurrentQuantity() > 0) {
             Order buyOrder = buyOrdersList.peek();
             if (sellOrder.getPrice() <= buyOrder.getPrice()) {
                 // Execute trade
-                sellOrder.status = OrderStatus.PARTIALLY_FILLED;
-                int tradeQuantity = Math.min(sellOrder.currentQuantity, buyOrder.currentQuantity);
+                sellOrder.setStatus(OrderStatus.PARTIALLY_FILLED);
+                int tradeQuantity = Math.min(sellOrder.getCurrentQuantity(), buyOrder.getCurrentQuantity());
                 double tradePrice = sellOrder.getPrice(); //Use the sell order's price for the trade
                 Trade trade = new Trade(symbol, 
                                         tradePrice, tradeQuantity, 
@@ -107,10 +109,10 @@ public class OrderBook {
                                         new Timestamp(System.currentTimeMillis()));
                 trades.add(trade);
 
-                sellOrder.currentQuantity -= tradeQuantity;
-                buyOrder.currentQuantity -= tradeQuantity;
+                sellOrder.setCurrentQuantity(sellOrder.getCurrentQuantity() - tradeQuantity);
+                buyOrder.setCurrentQuantity(buyOrder.getCurrentQuantity() - tradeQuantity);
 
-                if (buyOrder.currentQuantity == 0) {
+                if (buyOrder.getCurrentQuantity() == 0) {
                     processFullyFilledOrders(buyOrder); 
                     buyOrdersList.poll();
                 }
@@ -123,7 +125,7 @@ public class OrderBook {
 
     public void processFullyFilledOrders(Order order) {
         System.out.println(symbol + " - Order fully fulfilled and removed from " + order.getSide() + " side of order book: " + order.getOrderId());
-        order.status = OrderStatus.FILLED;
+        order.setStatus(OrderStatus.FILLED);
 
         lastTenFulfilledOrders.offer(order);
         if (lastTenFulfilledOrders.size() >= 10) {
@@ -147,7 +149,7 @@ public class OrderBook {
         if (trades == null || trades.isEmpty()) {
             return 0.0; // Or another default value like -1 or Double.NaN
         }
-        this.currentPrice = trades.get(trades.size() - 1).price;
+        this.currentPrice = trades.get(trades.size() - 1).getPrice();
         return currentPrice;
     }
 

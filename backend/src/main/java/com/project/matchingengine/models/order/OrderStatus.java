@@ -4,7 +4,7 @@ public enum OrderStatus{
     PENDING,
     FILLED,
     PARTIALLY_FILLED,
-    CANCELED;
+    CANCELLED;
 
 
     public static OrderStatus fromString(String status) {
@@ -18,8 +18,8 @@ public enum OrderStatus{
                 return FILLED;
             case "PARTIALLY_FILLED":
                 return PARTIALLY_FILLED;
-            case "CANCELED":
-                return CANCELED;
+            case "CANCELLED":
+                return CANCELLED;
             default:
                 throw new IllegalArgumentException("Unknown order status: " + status);
         }

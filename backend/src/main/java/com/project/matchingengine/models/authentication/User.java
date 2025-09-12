@@ -2,10 +2,12 @@ package com.project.matchingengine.models.authentication;
 
 import java.util.UUID;
 
-import org.springframework.data.annotation.Id;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
-//@Entity
-//@Table(name = "users")
+@Entity
+@Table(name = "users")
 public class User {
     @Id
     private UUID userId;
@@ -16,6 +18,10 @@ public class User {
         this.userId = userId;
         this.password = password;
         this.email = email;
+    }
+
+    public User() {
+        // Default no-arg constructor
     }
 
     public UUID getUserId() {

@@ -42,7 +42,6 @@ public class KafkaConsumer {
         try {
             Order order = objectMapper.readValue(orderJson, Order.class);
 
-            // pass the order to oderboook
             OrderBook orderBook = orderBookConfig.getOrCreateOrderBook(order.getSymbol());
             
             // if (order.status == OrderStatus.PARTIALLY_FILLED ||order.status == OrderStatus.FILLED ){
@@ -70,16 +69,16 @@ public class KafkaConsumer {
         
         for (int i = 0; i < trades.size(); i++) {
             Trade trade = trades.get(i);
-            logger.info("Trade " + (i + 1) + ": " + trade.symbol +
-                                " || Price: " + trade.price +
-                                " || Quantity: " + trade.quantity +
+            logger.info("Trade " + (i + 1) + ": " + trade.getSymbol() +
+                                " || Price: " + trade.getPrice() +
+                                " || Quantity: " + trade.getQuantity() +
                                 " || Buy Order: " + trade.getBuyOrderId() +
                                 " || Sell Order: " + trade.getSellOrderId() +
-                                " || Timestamp: " + trade.tradeTimestamp);
+                                " || Timestamp: " + trade.getTradeTimestamp());
 
             logger.info("Trade {}: {} || Price: {} || Quantity: {} || Buy Order: {} || Sell Order: {} || Timestamp: {}",
-                    i + 1, trade.symbol, trade.price, trade.quantity, 
-                    trade.getBuyOrderId(), trade.getSellOrderId(), trade.tradeTimestamp);
+                    i + 1, trade.getSymbol(), trade.getPrice(), trade.getSymbol(),
+                    trade.getBuyOrderId(), trade.getSellOrderId(), trade.getTradeTimestamp());
         }
     }
 }
