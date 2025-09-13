@@ -84,16 +84,8 @@ public class Order implements java.io.Serializable {
         return orderId;
     }
 
-    public void setOrderId(UUID orderId) {
-        this.orderId = orderId;
-    }
-
     public String getUserId() {
         return userId;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
     }
 
     public String getSymbol() {
@@ -114,10 +106,6 @@ public class Order implements java.io.Serializable {
     
     public int getOriginalQuantity() {
         return originalQuantity;
-    }
-
-    public void setOriginalQuantity(int originalQuantity) {
-        this.originalQuantity = originalQuantity;
     }
 
     public int getCurrentQuantity() {
@@ -162,10 +150,6 @@ public class Order implements java.io.Serializable {
 
     public Timestamp getOrderTimestamp() {
         return orderTimestamp;
-    }
-
-    public void setOrderTimestamp(Timestamp orderTimestamp) {
-        this.orderTimestamp = orderTimestamp;
     }
 
     @Override

@@ -1,6 +1,5 @@
 package com.project.matchingengine.controllers.order;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,7 +9,6 @@ import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 import java.util.UUID;
-import java.sql.Timestamp;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.matchingengine.models.order.Order;
@@ -23,12 +21,12 @@ import com.project.matchingengine.service.orderbook.OrderService;
 *  - Implement service layer for order processing, trade execution, and stock management
 * */
 @RestController
-//@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:3000")
 @RequestMapping("api/orders")
 @Validated
 public class OrderController {
     private static final Logger logger = LoggerFactory.getLogger(OrderController.class);
-     private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
     private OrderService orderService;
 
     @Autowired
@@ -39,23 +37,24 @@ public class OrderController {
     }
 
     @PostMapping("submitOrder")
-    public ResponseEntity<Order> submitOrder(@RequestBody Order order)
+    public ResponseEntity<String> submitOrder(@RequestBody Order order)
     {
         try {
-//            order.setOrderId(UUID.randomUUID());
-//            order.setOrderTimestamp(new Timestamp(System.currentTimeMillis()));
+            // order.setOrderId(UUID.randomUUID());
+            // order.setOrderTimestamp(new Timestamp(System.currentTimeMillis()));
             orderService.submitOrder(order);
-            ResponseEntity.ok().body(orderService.saveOrder(order));
+            ResponseEntity.ok().body("Order submitted successfully!");
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(null);
+            return ResponseEntity.internalServerError().body("Failed to submit order: " + e.getMessage());
         }
         return null;
     }
 
     @PostMapping("")
-    public ResponseEntity<Order> saveOrder(@RequestBody Order order)
+    public ResponseEntity<String> saveOrder(@RequestBody Order order)
     {
-        return ResponseEntity.ok().body(orderService.saveOrder(order));
+        orderService.saveOrder(order);
+        return ResponseEntity.ok().body("Saving done!");
     }
 
     @GetMapping("")
@@ -70,15 +69,10 @@ public class OrderController {
         return ResponseEntity.ok().body(orderService.getOrderById(orderId));
     }
 
-    @PutMapping("")
-    public ResponseEntity<Order> updateOrder(@PathVariable Order order)
-    {
-        return ResponseEntity.ok().body(orderService.updateOrder(order));
-    }
-
     @DeleteMapping("{orderId}")
     public ResponseEntity<String> removeOrder(@PathVariable UUID orderId)
     {
+        logger.info("Remove API called");
         orderService.removeOrder(orderId);
         return ResponseEntity.ok().body("Deleted order successfully");
     }
@@ -254,10 +248,6 @@ public class OrderController {
 //    private String generateConfirmationNumber() {
 //        return "CONF-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 //    }
-//
-//
-//
-//
 //
 //    @GetMapping("orderForm")
 //    public String getOrderForm(Model model) {

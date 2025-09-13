@@ -10,7 +10,6 @@ import com.project.matchingengine.service.kafka.KafkaProducer;
 import com.project.matchingengine.repository.order.OrderRepo;
 import org.springframework.messaging.handler.annotation.Payload;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,13 +32,13 @@ public class OrderService {
     {
         kafkaProducer.sendOrder(order);
         logger.info("Order: {} - Submitted to Kafka", order.getOrderId());
+        saveOrder(order);
     }
 
-    public Order saveOrder(Order order)
+    public void saveOrder(Order order)
     {
-        Order savedOrder = orderRepo.save(order);
+        orderRepo.save(order);
         logger.info("Order: {} - Saved", order.getOrderId());
-        return savedOrder;
     }
 
     public Order getOrderById(UUID orderId)
@@ -63,11 +62,10 @@ public class OrderService {
         return null;
     }
 
-    public Order updateOrder(Order order)
+    public void updateOrder(Order order)
     {
-        Order updatedOrder = orderRepo.save(order);
+        orderRepo.save(order);
         logger.info("Order: {} - Updated successfully", order.getOrderId());
-        return updatedOrder;
     }
 
     public void removeOrder(UUID orderId)
@@ -75,8 +73,4 @@ public class OrderService {
         orderRepo.deleteById(orderId);
         logger.info("Order: {} - Removed", orderId);
     }
-
-
-
-
 }
