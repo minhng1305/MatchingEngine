@@ -17,6 +17,9 @@ public class Trade implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @Id
+    private UUID tradeId;
+
+    @Column(nullable = false)
     private String symbol;
 
     @Column(nullable = false)
@@ -38,13 +41,24 @@ public class Trade implements Serializable {
         // Default constructor for serialization/deserialization
     }
 
-    public Trade(String symbol, double price, int quantity, UUID buyOrderId, UUID sellOrderId, Timestamp tradeTimestamp) {
+    public Trade(UUID tradeId,
+                 String symbol,
+                 double price,
+                 int quantity,
+                 UUID buyOrderId,
+                 UUID sellOrderId,
+                 Timestamp tradeTimestamp) {
+        this.tradeId = tradeId;
         this.symbol = symbol;
         this.price = price;
         this.quantity = quantity;
         this.buyOrderId = buyOrderId;
         this.sellOrderId = sellOrderId;
         this.tradeTimestamp = tradeTimestamp;
+    }
+
+    public UUID getTradeId() {
+        return tradeId;
     }
 
     public String getSymbol() {
@@ -75,24 +89,24 @@ public class Trade implements Serializable {
         return buyOrderId;
     }
 
-    public void setBuyOrderId(UUID buyOrderId) {
-        this.buyOrderId = buyOrderId;
-    }
-
     public UUID getSellOrderId() {
         return sellOrderId;
-    }
-
-    public void setSellOrderId(UUID sellOrderId) {
-        this.sellOrderId = sellOrderId;
     }
 
     public Timestamp getTradeTimestamp() {
         return tradeTimestamp;
     }
 
-    public void setTradeTimestamp(Timestamp tradeTimestamp) {
-        this.tradeTimestamp = tradeTimestamp;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Trade trade = (Trade) o;
+        return Objects.equals(tradeId, trade.tradeId);
     }
 
+    @Override
+    public int hashCode() {
+        return Objects.hash(tradeId);
+    }
 }

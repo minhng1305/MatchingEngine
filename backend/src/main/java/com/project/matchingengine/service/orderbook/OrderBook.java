@@ -7,6 +7,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.UUID;
 
 import com.project.matchingengine.models.order.Order;
 import com.project.matchingengine.models.order.OrderBookSummary;
@@ -15,7 +16,6 @@ import com.project.matchingengine.models.order.OrderStatus;
 import com.project.matchingengine.models.order.Trade;
 
 
-// @Service
 public class OrderBook {
     private String symbol;
     private final PriorityQueue<Order> buyOrdersList;
@@ -23,10 +23,10 @@ public class OrderBook {
     private final ArrayList<Trade> trades;
     private double currentPrice;
     private final Queue<Order> lastTenFulfilledOrders;
-    private OrderService orderService;
+    private final OrderService orderService;
+    private final TradeService tradeService;
 
-
-    public OrderBook(String symbol) {
+    public OrderBook(String symbol, OrderService orderService, TradeService tradeService) {
         this.symbol = symbol;
         this.buyOrdersList  = new PriorityQueue<>(Comparator.comparing(Order::getPrice)
                                                             .reversed()
@@ -36,6 +36,8 @@ public class OrderBook {
         this.trades = new ArrayList<>();
         this.currentPrice = 0.0;
         this.lastTenFulfilledOrders = new LinkedList<>();
+        this.orderService = orderService;
+        this.tradeService = tradeService;
     }
 
 
@@ -44,19 +46,18 @@ public class OrderBook {
             matchBuyOrder(order);
             if (order.getCurrentQuantity() > 0) {
                 buyOrdersList.add(order);
-                orderService.updateOrder(order);
             } else {
                 processFullyFilledOrders(order);
             }
+            orderService.updateOrder(order);
         } else {
             matchSellOrder(order);
             if (order.getCurrentQuantity() > 0) {
                 sellOrdersList.add(order);
-                orderService.updateOrder(order);
             } else {
                 processFullyFilledOrders(order);
-                orderService.removeOrder(order.getOrderId());
             }
+            orderService.updateOrder(order);
         }
         if (!trades.isEmpty()) {
             this.currentPrice = trades.get(trades.size() - 1).getPrice();
@@ -70,15 +71,20 @@ public class OrderBook {
             if (buyOrder.getPrice() >= sellOrder.getPrice()) {
 
                 buyOrder.setStatus(OrderStatus.PARTIALLY_FILLED);
+                if (sellOrder.getStatus() != OrderStatus.PARTIALLY_FILLED) {
+                    sellOrder.setStatus(OrderStatus.PARTIALLY_FILLED);
+                }
                 int tradeQuantity = Math.min(buyOrder.getCurrentQuantity(), sellOrder.getCurrentQuantity());
                 double tradePrice = sellOrder.getPrice();
-                Trade trade = new Trade(this.symbol, 
+                Trade trade = new Trade(UUID.randomUUID(),
+                                        this.symbol,
                                         tradePrice, 
                                         tradeQuantity, 
                                         buyOrder.getOrderId(), 
                                         sellOrder.getOrderId(), 
                                         new Timestamp(System.currentTimeMillis()));
                 trades.add(trade);
+                tradeService.saveTrade(trade);
 
                 buyOrder.setCurrentQuantity(buyOrder.getCurrentQuantity() - tradeQuantity);
                 sellOrder.setCurrentQuantity(sellOrder.getCurrentQuantity() - tradeQuantity);
@@ -87,6 +93,8 @@ public class OrderBook {
                     processFullyFilledOrders(sellOrder);
                     sellOrdersList.poll();
                 }
+                orderService.updateOrder(sellOrder);
+                orderService.updateOrder(buyOrder);
             } else {
                 break;
             }
@@ -100,14 +108,19 @@ public class OrderBook {
             if (sellOrder.getPrice() <= buyOrder.getPrice()) {
                 // Execute trade
                 sellOrder.setStatus(OrderStatus.PARTIALLY_FILLED);
+                if (buyOrder.getStatus() != OrderStatus.PARTIALLY_FILLED) {
+                    buyOrder.setStatus(OrderStatus.PARTIALLY_FILLED);
+                }
                 int tradeQuantity = Math.min(sellOrder.getCurrentQuantity(), buyOrder.getCurrentQuantity());
                 double tradePrice = sellOrder.getPrice(); //Use the sell order's price for the trade
-                Trade trade = new Trade(symbol, 
+                Trade trade = new Trade(UUID.randomUUID(),
+                                        this.symbol,
                                         tradePrice, tradeQuantity, 
                                         buyOrder.getOrderId(), 
                                         sellOrder.getOrderId(), 
                                         new Timestamp(System.currentTimeMillis()));
                 trades.add(trade);
+                tradeService.saveTrade(trade);
 
                 sellOrder.setCurrentQuantity(sellOrder.getCurrentQuantity() - tradeQuantity);
                 buyOrder.setCurrentQuantity(buyOrder.getCurrentQuantity() - tradeQuantity);
@@ -116,6 +129,8 @@ public class OrderBook {
                     processFullyFilledOrders(buyOrder); 
                     buyOrdersList.poll();
                 }
+                orderService.updateOrder(sellOrder);
+                orderService.updateOrder(buyOrder);
             } else {
                 break;
             }
