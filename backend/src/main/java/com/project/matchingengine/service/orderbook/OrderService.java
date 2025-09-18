@@ -1,5 +1,6 @@
 package com.project.matchingengine.service.orderbook;
 
+import com.project.matchingengine.models.order.Stock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -68,9 +69,14 @@ public class OrderService {
         logger.info("Order: {} - Updated successfully", order.getOrderId());
     }
 
+    /* TODO: Remove order logic
+        1. If order is in PENDING status, remove it from the order book and set its status to CANCELLED.
+        2. If order is in PARTIALLY_FILLED status, remove it from the order book and set its status to CANCELLED.
+        3. If order is in FILLED or CANCELLED status, do nothing.
+     */
     public void removeOrder(UUID orderId)
     {
-        orderRepo.deleteById(orderId);
+
         logger.info("Order: {} - Removed", orderId);
     }
 }

@@ -14,6 +14,7 @@ import com.project.matchingengine.models.order.OrderBookSummary;
 import com.project.matchingengine.models.order.OrderSide;
 import com.project.matchingengine.models.order.OrderStatus;
 import com.project.matchingengine.models.order.Trade;
+import org.springframework.beans.factory.annotation.Autowired;
 
 
 public class OrderBook {
@@ -26,6 +27,7 @@ public class OrderBook {
     private final OrderService orderService;
     private final TradeService tradeService;
 
+    @Autowired
     public OrderBook(String symbol, OrderService orderService, TradeService tradeService) {
         this.symbol = symbol;
         this.buyOrdersList  = new PriorityQueue<>(Comparator.comparing(Order::getPrice)
