@@ -42,7 +42,7 @@ public class KafkaConsumer {
         try {
             Order order = objectMapper.readValue(orderJson, Order.class);
 
-            OrderBook orderBook = orderBookConfig.getOrCreateOrderBook(order.getSymbol());
+            OrderBook orderBook = orderBookConfig.getOrderBook(order.getSymbol());
             
             // if (order.status == OrderStatus.PARTIALLY_FILLED ||order.status == OrderStatus.FILLED ){
             //     notificationService.sendTradeNotificationToUser(trade);

@@ -20,8 +20,8 @@ public class Order implements java.io.Serializable {
     @Id
     private UUID orderId;
 
-    @Column(name = "user_id", nullable = false)
-    private String userId;
+    @Column(name = "user_email", nullable = false)
+    private String userEmail;
 
     @Column(nullable = false)
     private String symbol;
@@ -59,7 +59,7 @@ public class Order implements java.io.Serializable {
     }
     
     public Order(UUID orderId,
-                 String userId,
+                 String userEmail,
                  String symbol, 
                  double price, 
                  int originalQuantity, 
@@ -68,7 +68,7 @@ public class Order implements java.io.Serializable {
                  double limitPrice, 
                  Timestamp orderTimestamp) {
         this.orderId = orderId;
-        this.userId = userId;
+        this.userEmail = userEmail;
         this.symbol = symbol;
         this.price = price;
         this.currentQuantity = originalQuantity;
@@ -84,8 +84,8 @@ public class Order implements java.io.Serializable {
         return orderId;
     }
 
-    public String getUserId() {
-        return userId;
+    public String getUserEmail() {
+        return userEmail;
     }
 
     public String getSymbol() {

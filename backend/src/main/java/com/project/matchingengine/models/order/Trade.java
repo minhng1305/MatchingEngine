@@ -98,10 +98,10 @@ public class Trade implements Serializable {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Trade trade = (Trade) o;
+    public boolean equals(Object t) {
+        if (this == t) return true;
+        if (t == null || getClass() != t.getClass()) return false;
+        Trade trade = (Trade) t;
         return Objects.equals(tradeId, trade.tradeId);
     }
 

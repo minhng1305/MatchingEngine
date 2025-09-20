@@ -13,7 +13,7 @@ function StockDetail() {
         const fetchStockData = async () => {
             try {
                 // Replace with your actual API endpoints
-                const stockResponse = await axios.get(`/api/stocks/${symbol}`);
+                const stockResponse = await axios.get(`/api/trades/${symbol}`);
                 const tradesResponse = await axios.get(`/api/stocks/${symbol}/trades`);
 
                 setStockData(stockResponse.data);

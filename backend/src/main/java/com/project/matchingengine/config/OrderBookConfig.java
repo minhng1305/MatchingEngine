@@ -2,22 +2,28 @@ package com.project.matchingengine.config;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Arrays;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.project.matchingengine.service.orderbook.OrderBook;
 import com.project.matchingengine.service.orderbook.OrderService;
 import com.project.matchingengine.service.orderbook.TradeService;
-
+import com.project.matchingengine.models.order.Stock;
 
 
 @Configuration
 public class OrderBookConfig {
+    private static final Logger logger = LoggerFactory.getLogger(OrderBookConfig.class);
     private Map<String, OrderBook> orderBooks;
-    private final String[] symbols = {"AAPL", "GOOGL", "AMZN", "MSFT", "TSLA"};
     private final OrderService orderService;
     private final TradeService tradeService;
+    private final String[] symbols = Arrays.stream(Stock.values())
+                                            .map(Enum::name)
+                                            .toArray(String[]::new);
 
     public OrderBookConfig(OrderService orderService, TradeService tradeService) {
         this.orderService = orderService;
@@ -33,9 +39,10 @@ public class OrderBookConfig {
         return orderBooks;
     }
 
-    public OrderBook getOrCreateOrderBook(String symbol) {
+    public OrderBook getOrderBook(String symbol) {
         if  (!orderBooks.containsKey(symbol)) {
-            orderBooks.put(symbol, new OrderBook(symbol, orderService, tradeService));
+            logger.info("Symbol: {} - Does NOT exist in OrderBooks map", symbol);
+            return null;
         }
         return orderBooks.get(symbol);
     }

@@ -5,11 +5,9 @@ import com.project.matchingengine.repository.order.TradeRepo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -29,16 +27,6 @@ public class TradeService {
         logger.info("Trade: {} - Saved", trade.getTradeId());
     }
 
-//    public Trade getTradeById(UUID tradeId)
-//    {
-//        Optional<Trade> optionalOrder = TradeRepo.findById(tradeId);
-//        if(optionalOrder.isPresent()){
-//            return optionalOrder.get();
-//        }
-//        logger.info("Trade: {} - Does NOT exist", tradeId);
-//        return null;
-//    }
-
     public List<Trade> getAllTrades()
     {
         return tradeRepo.findAll();
@@ -47,7 +35,14 @@ public class TradeService {
     // TODO: Fetch trades by symbol logic
     public List<Trade> getTradesBySymbol(String symbol)
     {
-        return null;
+        try {
+            List<Trade> trades = tradeRepo.findTradesBySymbol(symbol);
+            logger.info("Found {} trades for symbol: {}", trades.size(), symbol);
+            return trades;
+        } catch (Exception e) {
+            logger.error("Error fetching trades for symbol {}: {}", symbol, e.getMessage());
+            return List.of();
+        }
     }
 
 
