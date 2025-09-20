@@ -122,7 +122,7 @@ def submit_orders(num_orders):
     print(f"\nResults Summary: {successful} orders submitted successfully, {failed} failed")
 
 if __name__ == "__main__":
-    num_orders = int(input("How many test MARKET orders would you like to generate? "))
+    num_orders = 100
     
     print(f"Starting performance test with {num_orders} orders...")
     submit_orders(num_orders)
