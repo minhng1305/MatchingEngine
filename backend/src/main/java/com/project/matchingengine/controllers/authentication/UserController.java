@@ -5,21 +5,28 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import com.project.matchingengine.models.authentication.User;
-import com.project.matchingengine.service.authentication.UserService;
+import com.project.matchingengine.repository.authentication.UserRepo;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 
 @RestController
 @CrossOrigin(origins = "http://localhost:3000")
-@RequestMapping("api/auth")
-public class UserController {
+@RequestMapping("api/user")
+public class UserController
+{
+    private UserRepo userRepo;
 
     @Autowired
-    private UserService service;
-
-    @PostMapping("register")
-    public User register(@RequestBody User user)
+    public UserController(UserRepo userRepo)
     {
-        return service.saveUser(user);
+        this.userRepo = userRepo;
+    }
+
+    @GetMapping("info")
+    public User getUserDetails()
+    {
+        String userName = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return userRepo.findByUsername(userName).get();
     }
 }
 

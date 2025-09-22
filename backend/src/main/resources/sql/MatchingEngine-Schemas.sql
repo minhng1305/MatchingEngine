@@ -1,5 +1,6 @@
 CREATE TABLE public.users (
-    email VARCHAR(255) PRIMARY KEY,
+    user_id UUID PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
     username VARCHAR(255) NOT NULL,
     password VARCHAR(255) NOT NULL
 );
@@ -11,17 +12,17 @@ CREATE TYPE order_status_enum AS ENUM ('PENDING', 'FILLED', 'PARTIALLY_FILLED', 
 
 CREATE TABLE public.orders (
     order_id UUID PRIMARY KEY,
-    user_email VARCHAR(255) NOT NULL,
+    user_id UUID NOT NULL, -- This column has been changed from user_email
     symbol VARCHAR(255) NOT NULL,
-    price DOUBLE PRECISION NOT NULL,
+    price DOUBLE PRECISION, -- Price can be nullable for MARKET orders
     original_quantity INTEGER NOT NULL,
     current_quantity INTEGER NOT NULL,
     side order_side_enum,
     type order_type_enum,
-    limit_price DOUBLE PRECISION NOT NULL,
+    limit_price DOUBLE PRECISION, -- Limit price is only relevant for LIMIT orders
     order_timestamp TIMESTAMP NOT NULL,
     status order_status_enum,
-    CONSTRAINT fk_user_email FOREIGN KEY(user_email) REFERENCES public.users(email)
+    CONSTRAINT fk_user FOREIGN KEY(user_id) REFERENCES public.users(user_id) -- The constraint is updated
 );
 
 -------------------------------------------------------------------------------------
@@ -37,3 +38,9 @@ CREATE TABLE public.trades (
     CONSTRAINT fk_buy_order FOREIGN KEY(buy_order_id) REFERENCES public.orders(order_id),
     CONSTRAINT fk_sell_order FOREIGN KEY(sell_order_id) REFERENCES public.orders(order_id)
 );
+
+CREATE INDEX idx_orders_user_id ON public.orders(user_id);
+CREATE INDEX idx_orders_symbol_status ON public.orders(symbol, status);
+CREATE INDEX idx_trades_symbol ON public.trades(symbol);
+
+--------------------------------------------------------------------------------------

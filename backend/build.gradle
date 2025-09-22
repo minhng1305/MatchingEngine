@@ -66,6 +66,9 @@ dependencies {
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
+    // JWT (Java JWT: JSON Web Token for Java and Android)
+    implementation 'com.auth0:java-jwt:4.4.0'
+
 	// Database dependencies
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.postgresql:postgresql'
@@ -75,6 +78,8 @@ dependencies {
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    runtimeOnly 'com.h2database:h2'
 //
 //	// H2 Database for testing
 //	testImplementation 'com.h2database:h2'

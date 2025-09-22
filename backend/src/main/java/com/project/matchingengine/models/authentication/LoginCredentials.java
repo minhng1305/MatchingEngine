@@ -1,41 +1,19 @@
 package com.project.matchingengine.models.authentication;
 
-import java.util.UUID;
-
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import jakarta.persistence.*;
 
-@Entity
-@Table(name = "users")
 @Getter
 @Setter
-@ToString
+@AllArgsConstructor
 @NoArgsConstructor
-public class User {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID userId;
-
-    @Column(nullable = false)
-    private String email;
-
-    @Column(nullable = false)
+@ToString
+public class LoginCredentials {
     private String username;
-
-    @Column(nullable = false)
     private String password;
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
 
     public String getUsername() {
         return username;
@@ -52,4 +30,5 @@ public class User {
     public void setPassword(String password) {
         this.password = password;
     }
+
 }
