@@ -8,6 +8,9 @@ java -cp build/classes/java/main com.project.matchingengine.OrderBookVerificatio
 # build
 ./gradlew clean build
 
+# build with refresh dependencies
+gradle clean build --refresh-dependencies
+
 # build without running test
 ./gradlew clean build -x test
 
