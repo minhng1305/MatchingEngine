@@ -41,20 +41,15 @@ public class KafkaConsumer {
     public void processOrder(String orderJson) {
         try {
             Order order = objectMapper.readValue(orderJson, Order.class);
-
             OrderBook orderBook = orderBookConfig.getOrderBook(order.getSymbol());
-            
-            // if (order.status == OrderStatus.PARTIALLY_FILLED ||order.status == OrderStatus.FILLED ){
-            //     notificationService.sendTradeNotificationToUser(trade);
-            // }
 
-            // can be deleted later
             if (latch != null) {
                 latch.countDown();
             }
-
             orderBook.addOrder(order);
-            logger.info("Price: {}", orderBook.getCurrentPrice());
+
+            logger.info("Current Price for {}: {}", order.getSymbol(), orderBook.getCurrentPrice());
+
             notificationService.broadcastOrderBookUpdate(orderBook.getOrderBookSummary());
         } catch (Exception e) {
             logger.error("Failed to process order from Kafka: {}", e.getMessage(), e);
@@ -66,7 +61,6 @@ public class KafkaConsumer {
             System.out.println("No trades executed");
             return;
         }
-        
         for (int i = 0; i < trades.size(); i++) {
             Trade trade = trades.get(i);
             logger.info("Trade " + (i + 1) + ": " + trade.getSymbol() +

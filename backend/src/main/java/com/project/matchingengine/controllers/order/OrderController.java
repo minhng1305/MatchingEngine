@@ -1,26 +1,25 @@
 package com.project.matchingengine.controllers.order;
 
-import com.project.matchingengine.models.order.Stock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.util.Arrays;
+import java.util.Map;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.UUID;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.matchingengine.models.order.Order;
 import com.project.matchingengine.service.orderbook.OrderService;
+import com.project.matchingengine.models.order.OrderSide;
+import com.project.matchingengine.models.order.OrderType;
+import com.project.matchingengine.config.OrderBookConfig;
 
 
-
-/* TODO: Implement the following functions
-*  - Implement service layer for order processing, trade execution, and stock management
-* */
 @RestController
 @CrossOrigin(origins = "http://localhost:3000")
 @RequestMapping("api/orders")
@@ -30,54 +29,94 @@ public class OrderController {
     private static final Logger logger = LoggerFactory.getLogger(OrderController.class);
     private final ObjectMapper objectMapper;
     private OrderService orderService;
-    private final String[] symbols = Arrays.stream(Stock.values())
-            .map(Enum::name)
-            .toArray(String[]::new);
+    private final OrderBookConfig orderBookConfig;
 
     @Autowired
-    public OrderController(ObjectMapper objectMapper, OrderService orderService)
+    public OrderController(ObjectMapper objectMapper, OrderService orderService, OrderBookConfig orderBookConfig)
     {
         this.objectMapper = objectMapper;
         this.orderService = orderService;
+        this.orderBookConfig = orderBookConfig;
     }
 
-    @PostMapping("")
-    public ResponseEntity<String> submitOrder(@RequestBody Order order)
-    {
+    @PostMapping("/submit")
+    public ResponseEntity<?> submitOrder(@RequestBody Map<String, Object> orderData) {
         try {
-            // order.setOrderId(UUID.randomUUID());
-            // order.setOrderTimestamp(new Timestamp(System.currentTimeMillis()));
-            if (!Arrays.asList(symbols).contains(order.getSymbol())) {
-                logger.info("Symbol: {} - Does NOT exist in OrderBooks map", order.getSymbol());
-                return ResponseEntity.ok().body("Order symbol does not exist!");
-            }
+            String symbol = (String) orderData.get("symbol");
+            String side = (String) orderData.get("side");
+            String type = (String) orderData.get("type");
+            double price = Double.parseDouble(orderData.get("price").toString());
+            int quantity = Integer.parseInt(orderData.get("quantity").toString());
+            String userId = (String) orderData.get("userId");
+
+            Order order = new Order(
+                    UUID.randomUUID(),
+                    UUID.fromString(userId),
+                    symbol,
+                    price,
+                    quantity,
+                    OrderSide.fromString(side),
+                    OrderType.fromString(type),
+                    price, // limitPrice same as price for simplicity
+                    new Timestamp(System.currentTimeMillis())
+            );
             orderService.submitOrder(order);
-            ResponseEntity.ok().body("Order submitted successfully!");
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "orderId", order.getOrderId().toString(),
+                    "message", "Order submitted successfully"
+            ));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Failed to submit order: " + e.getMessage());
+            logger.error("Error submitting order: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
         }
-        return null;
     }
 
-    @GetMapping("")
-    public ResponseEntity<List<Order>> getAllOrders()
-    {
-        return ResponseEntity.ok().body(orderService.getAllOrders());
+    @GetMapping("/{orderId}")
+    public ResponseEntity<?> getOrder(@PathVariable String orderId) {
+        try {
+            Order order = orderService.getOrderById(UUID.fromString(orderId));
+            if (order != null) {
+                return ResponseEntity.ok(order);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", e.getMessage()
+            ));
+        }
     }
 
-    @GetMapping("{orderId}")
-    public ResponseEntity<Order> getOrderById(@PathVariable UUID orderId)
-    {
-        return ResponseEntity.ok().body(orderService.getOrderById(orderId));
+    @GetMapping("/all")
+    public ResponseEntity<?> getAllOrders() {
+        try {
+            List<Order> orders = orderService.getAllOrders();
+            return ResponseEntity.ok(orders);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", e.getMessage()
+            ));
+        }
     }
 
-    @DeleteMapping("{orderId}")
-    public ResponseEntity<String> removeOrder(@PathVariable UUID orderId)
-    {
-        orderService.removeOrder(orderId);
-        return ResponseEntity.ok().body("Deleted order successfully");
+    @DeleteMapping("/{orderId}")
+    public ResponseEntity<?> deleteOrder(@PathVariable String orderId) {
+        try {
+            orderService.removeOrder(UUID.fromString(orderId));
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Order cancelled successfully"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
     }
-
-
-
 }

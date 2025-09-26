@@ -4,12 +4,7 @@ import java.sql.Timestamp;
 import java.util.UUID;
 import java.util.Objects;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
-import jakarta.persistence.Id;
-import jakarta.persistence.Column;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
+import jakarta.persistence.*;
 
 
 @Entity
@@ -18,6 +13,7 @@ public class Order implements java.io.Serializable {
     private static final long serialVersionUID = 1L;
 
     @Id
+//    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID orderId;
 
     @Column(name = "user_id", nullable = false)
@@ -36,11 +32,11 @@ public class Order implements java.io.Serializable {
     private int currentQuantity;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "side")
+    @Column(nullable = false)
     private OrderSide side;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "type")
+    @Column(nullable = false)
     private OrderType type;
 
     @Column(name = "limit_price", nullable = false)
@@ -50,7 +46,7 @@ public class Order implements java.io.Serializable {
     private Timestamp orderTimestamp;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status")
+    @Column(nullable = false)
     private OrderStatus status;
 
 
@@ -158,6 +154,10 @@ public class Order implements java.io.Serializable {
 
     public Timestamp getOrderTimestamp() {
         return orderTimestamp;
+    }
+
+    public void setOrderTimestamp(Timestamp orderTimestamp) {
+        this.orderTimestamp = orderTimestamp;
     }
 
     @Override
