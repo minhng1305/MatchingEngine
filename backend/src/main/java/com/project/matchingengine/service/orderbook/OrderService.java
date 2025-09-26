@@ -5,11 +5,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.handler.annotation.Payload;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+
 
 import com.project.matchingengine.models.order.Order;
 import com.project.matchingengine.service.kafka.KafkaProducer;
 import com.project.matchingengine.repository.order.OrderRepo;
-import org.springframework.messaging.handler.annotation.Payload;
+import com.project.matchingengine.models.order.OrderStatus;
+import com.project.matchingengine.models.order.OrderType;
 
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +38,6 @@ public class OrderService {
     public void submitOrder(@Payload Order order)
     {
         kafkaProducer.sendOrder(order);
-        logger.info("Order: {} - Submitted to Kafka", order.getOrderId());
         saveOrder(order);
     }
 
