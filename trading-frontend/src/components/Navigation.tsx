@@ -1,15 +1,28 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Navigation: React.FC = () => {
     const { user, logout } = useAuth();
+    const navigate = useNavigate();
+
+    const handleUserClick = () => {
+        navigate('/profile');
+    };
 
     return (
         <nav style={styles.nav}>
             <div style={styles.container}>
                 <h1 style={styles.title}>TradePro</h1>
                 <div style={styles.userSection}>
-                    <span style={styles.username}>Welcome, {user?.username}</span>
+                    {/* ✅ CHANGED: Made username clickable */}
+                    <span
+                        style={styles.username}
+                        onClick={handleUserClick}
+                        title="Click to view profile"
+                    >
+            Welcome, {user?.username}
+          </span>
                     <button style={styles.logoutBtn} onClick={logout}>
                         Logout
                     </button>
@@ -45,6 +58,13 @@ const styles = {
     },
     username: {
         fontSize: '0.9rem',
+        cursor: 'pointer', // ✅ ADDED: Make it look clickable
+        padding: '0.5rem 0.75rem', // ✅ ADDED: Better click area
+        borderRadius: '0.25rem', // ✅ ADDED: Rounded corners
+        transition: 'background-color 0.2s', // ✅ ADDED: Smooth hover
+        ':hover': {
+            backgroundColor: '#374151', // ✅ ADDED: Hover effect
+        },
     },
     logoutBtn: {
         backgroundColor: '#dc2626',

@@ -93,6 +93,34 @@ class ApiService {
     async getAllPrices(): Promise<{ prices: Record<string, number>; timestamp: number }> {
         return this.request('/prices/all');
     }
+
+    // User Profile
+    async getUserProfile(): Promise<{
+        user: { userId: string; username: string; email: string };
+        statistics: {
+            totalOrders: number;
+            pendingOrders: number;
+            filledOrders: number;
+            totalTrades: number;
+            totalTradeValue: number;
+        };
+        recentOrders: Order[];
+        recentTrades: Trade[];
+    }> {
+        return this.request('/user/profile');
+    }
+
+    async getUserOrders(): Promise<Order[]> {
+        return this.request('/user/orders');
+    }
+
+    async getUserTrades(): Promise<Trade[]> {
+        return this.request('/user/trades');
+    }
+
+    async getUserInfo(): Promise<{ userId: string; username: string; email: string }> {
+        return this.request('/user/info');
+    }
 }
 
 export const apiService = new ApiService();

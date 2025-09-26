@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import HomePage from './pages/HomePage';
 import StockDetailPage from './pages/StockDetailPage';
 import LoginPage from './pages/LoginPage';
+import ProfilePage from './pages/ProfilePage'; // ✅ NEW IMPORT
 import Navigation from './components/Navigation';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -42,6 +43,15 @@ const AppRoutes: React.FC = () => {
                         element={
                             <ProtectedRoute>
                                 <StockDetailPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    {/* ✅ NEW ROUTE: User profile page */}
+                    <Route
+                        path="/profile"
+                        element={
+                            <ProtectedRoute>
+                                <ProfilePage />
                             </ProtectedRoute>
                         }
                     />

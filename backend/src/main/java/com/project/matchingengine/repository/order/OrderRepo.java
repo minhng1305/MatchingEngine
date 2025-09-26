@@ -16,4 +16,6 @@ import java.util.UUID;
 public interface OrderRepo extends JpaRepository<Order, UUID>  {
     @Query("SELECT t FROM Trade t WHERE t.symbol = :symbol")
     List<Trade> findTradesBySymbol(@Param("symbol") String symbol);
+
+    List<Order> findByUserIdOrderByOrderTimestampDesc(UUID userId);
 }

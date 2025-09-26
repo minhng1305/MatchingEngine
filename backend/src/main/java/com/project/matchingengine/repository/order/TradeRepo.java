@@ -16,4 +16,7 @@ public interface TradeRepo extends JpaRepository<Trade, UUID> {
 
     @Query("SELECT t FROM Trade t WHERE t.symbol = :symbol")
     List<Trade> findTradesBySymbol(@Param("symbol") String symbol);
+
+    @Query("SELECT t FROM Trade t WHERE t.buyOrderId IN (SELECT o.orderId FROM Order o WHERE o.userId = ?1) OR t.sellOrderId IN (SELECT o.orderId FROM Order o WHERE o.userId = ?2) ORDER BY t.tradeTimestamp DESC")
+    List<Trade> findByBuyOrderUserIdOrSellOrderUserIdOrderByTradeTimestampDesc(UUID buyUserId, UUID sellUserId);
 }
