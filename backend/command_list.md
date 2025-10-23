@@ -17,6 +17,9 @@ gradle clean build --refresh-dependencies
 # Run the application
 ./gradlew bootRun
 
+# Run the application with specific profile
+./gradlew bootRun --args='--spring.profiles.active=server1'
+
 # List all source files in the src directory, sorted
 find src -type f | sort
 

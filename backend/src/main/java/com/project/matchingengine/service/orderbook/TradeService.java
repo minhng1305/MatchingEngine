@@ -24,7 +24,6 @@ public class TradeService {
     public void saveTrade(Trade trade)
     {
         tradeRepo.save(trade);
-        logger.info("Trade: {} - Saved", trade.getTradeId());
     }
 
     public List<Trade> getAllTrades()

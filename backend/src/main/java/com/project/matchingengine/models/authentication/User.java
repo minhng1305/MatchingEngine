@@ -29,6 +29,10 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+//    private double currentCapital = 0.0;
+//
+//    private int currEsgPoints = 0;
+
     public String getEmail() {
         return email;
     }
@@ -52,4 +56,20 @@ public class User {
     public void setPassword(String password) {
         this.password = password;
     }
+
+//    public double getCurrentCapital() {
+//        return currentCapital;
+//    }
+//
+//    public void setCurrentCapital(double currentCapital) {
+//        this.currentCapital = currentCapital;
+//    }
+//
+//    public int getCurrEsgPoints() {
+//        return currEsgPoints;
+//    }
+//
+//    public void setCurrEsgPoints(int currEsgPoints) {
+//        this.currEsgPoints = currEsgPoints;
+//    }
 }

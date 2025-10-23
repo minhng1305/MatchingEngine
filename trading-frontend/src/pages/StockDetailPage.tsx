@@ -11,14 +11,14 @@ const StockDetailPage: React.FC = () => {
     const { symbol } = useParams<{ symbol: string }>();
     const navigate = useNavigate();
 
-    // FIXED: Initialize with better default structure
     const [stockData, setStockData] = useState<OrderBookSummary | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [orderSuccess, setOrderSuccess] = useState('');
 
-    const { isConnected, subscribeToOrderBook, subscribeToTrades } = useWebSocket();
+    const { subscribeToOrderBook, subscribeToTrades } = useWebSocket();
 
+    // Load initial stock data
     useEffect(() => {
         if (!symbol) {
             navigate('/');
@@ -26,33 +26,39 @@ const StockDetailPage: React.FC = () => {
         }
 
         loadStockDetail();
-    }, [symbol, navigate]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [symbol]);
 
+    // Setup WebSocket subscriptions
     useEffect(() => {
-        if (isConnected && symbol) {
-            // Subscribe to real-time order book updates
-            const orderBookSub = subscribeToOrderBook(symbol, (orderBookData: OrderBookSummary) => {
-                console.log('Received order book update:', orderBookData);
-                setStockData(orderBookData);
-            });
+        if (!symbol) return;
 
-            // Subscribe to real-time trade updates
-            const tradesSub = subscribeToTrades(symbol, (tradeData) => {
-                console.log('Received trade update:', tradeData);
-                setStockData(prev => prev ? {
-                    ...prev,
-                    recentTrades: [tradeData, ...(prev.recentTrades || [])].slice(0, 10)
-                } : null);
-            });
+        const setupSubscriptions = async () => {
+            try {
+                // Subscribe to order book updates
+                await subscribeToOrderBook(symbol, (orderBookData: OrderBookSummary) => {
+                    console.log('Received order book update:', orderBookData);
+                    setStockData(orderBookData);
+                });
 
-            // Cleanup subscriptions
-            return () => {
-                if (orderBookSub) {
-                    // Note: Add unsubscribe logic if your useWebSocket hook supports it
-                }
-            };
-        }
-    }, [isConnected, symbol, subscribeToOrderBook, subscribeToTrades]);
+                // Subscribe to trade updates
+                await subscribeToTrades(symbol, (tradeData) => {
+                    console.log('Received trade update:', tradeData);
+                    setStockData(prev => prev ? {
+                        ...prev,
+                        recentTrades: [tradeData, ...(prev.recentTrades || [])].slice(0, 10)
+                    } : null);
+                });
+            } catch (err) {
+                console.error('Error setting up WebSocket subscriptions:', err);
+            }
+        };
+
+        setupSubscriptions();
+
+        // Cleanup is handled by useWebSocket hook
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [symbol]);
 
     const loadStockDetail = async () => {
         if (!symbol) return;
@@ -61,11 +67,9 @@ const StockDetailPage: React.FC = () => {
             setLoading(true);
             setError('');
             console.log('Loading stock detail for:', symbol);
-
             const data = await apiService.getStockDetail(symbol);
             console.log('Loaded stock data:', data);
 
-            // FIXED: Ensure data has proper structure with defaults
             const safeData: OrderBookSummary = {
                 symbol: data.symbol || symbol,
                 topBuys: data.topBuys || [],
@@ -92,15 +96,11 @@ const StockDetailPage: React.FC = () => {
             console.log('Submitting order:', order);
             const response = await apiService.submitOrder(order);
             setOrderSuccess(`Order submitted successfully! Order ID: ${response.orderId}`);
-
-            // Clear success message after 5 seconds
             setTimeout(() => setOrderSuccess(''), 5000);
-
-            // Reload stock data to show updated order book
             await loadStockDetail();
         } catch (err) {
             console.error('Error submitting order:', err);
-            throw err; // Let OrderForm handle the error
+            throw err;
         }
     };
 
@@ -110,42 +110,36 @@ const StockDetailPage: React.FC = () => {
 
     if (loading) {
         return (
-            <div style={styles.container}>
-                <div style={styles.loading}>
-                    <div style={styles.spinner}></div>
-                    <p>Loading stock details...</p>
-                </div>
+            <div style={styles.loading}>
+                <div style={styles.spinner}></div>
+                <p>Loading stock details...</p>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div style={styles.container}>
-                <div style={styles.error}>
-                    <h3>Error Loading Stock</h3>
-                    <p>{error}</p>
-                    <button onClick={loadStockDetail} style={styles.retryButton}>
-                        Try Again
-                    </button>
-                    <button onClick={handleBackClick} style={styles.backButton}>
-                        ← Back to Home
-                    </button>
-                </div>
+            <div style={styles.error}>
+                <h2>Error Loading Stock</h2>
+                <p>{error}</p>
+                <button style={styles.retryButton} onClick={loadStockDetail}>
+                    Try Again
+                </button>
+                <button style={styles.backButton} onClick={handleBackClick}>
+                    ← Back to Home
+                </button>
             </div>
         );
     }
 
     if (!stockData) {
         return (
-            <div style={styles.container}>
-                <div style={styles.error}>
-                    <h3>Stock Not Found</h3>
-                    <p>The requested stock symbol could not be found.</p>
-                    <button onClick={handleBackClick} style={styles.backButton}>
-                        ← Back to Home
-                    </button>
-                </div>
+            <div style={styles.error}>
+                <h2>Stock Not Found</h2>
+                <p>The requested stock symbol could not be found.</p>
+                <button style={styles.backButton} onClick={handleBackClick}>
+                    ← Back to Home
+                </button>
             </div>
         );
     }
@@ -153,7 +147,7 @@ const StockDetailPage: React.FC = () => {
     return (
         <div style={styles.container}>
             <div style={styles.header}>
-                <button onClick={handleBackClick} style={styles.backButton}>
+                <button style={styles.backButton} onClick={handleBackClick}>
                     ← Back to Stocks
                 </button>
                 <div style={styles.stockInfo}>
@@ -167,9 +161,7 @@ const StockDetailPage: React.FC = () => {
             </div>
 
             {orderSuccess && (
-                <div style={styles.success}>
-                    {orderSuccess}
-                </div>
+                <div style={styles.success}>{orderSuccess}</div>
             )}
 
             <div style={styles.content}>
@@ -179,8 +171,6 @@ const StockDetailPage: React.FC = () => {
                         currentPrice={stockData.currentPrice}
                         onSubmitOrder={handleOrderSubmit}
                     />
-
-                    {/* ✅ FIXED: Now passes safe data to OrderBook */}
                     <OrderBook
                         topBuys={stockData.topBuys || []}
                         lowestSells={stockData.lowestSells || []}
@@ -188,7 +178,6 @@ const StockDetailPage: React.FC = () => {
                         bestAskPrice={stockData.bestAskPrice || 0}
                     />
                 </div>
-
                 <div style={styles.rightColumn}>
                     <TradesList trades={stockData.recentTrades || []} />
                 </div>

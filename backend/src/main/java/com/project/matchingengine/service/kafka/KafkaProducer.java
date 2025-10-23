@@ -17,11 +17,8 @@ public class KafkaProducer {
     private final ObjectMapper objectMapper;
     private final KafkaTemplate<String, String> kafkaTemplate;
 
-    @Value("${app.kafka.topics.order-submission}")
-    private String orderSubmissionTopic;
-
-    @Value("${app.kafka.topics.market-data-updates}")
-    private String marketDataUpdatesTopic;
+    @Value("${app.kafka.topics.order-submission-prefix:order-}")
+    private String orderTopicPrefix;
 
 
     public KafkaProducer(KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper) {
@@ -32,14 +29,24 @@ public class KafkaProducer {
 
     public void sendOrder(Order order) {
         try {
-            logger.info("Attempting Asynchronous send for Order: {}", order.getOrderId().toString());
             String orderJson = objectMapper.writeValueAsString(order);
-            // Synchronous send (for demonstration purposes, can be removed in production)
-            kafkaTemplate.send(orderSubmissionTopic, order.getOrderId().toString(), orderJson);
+            String topicName = generateTopicName(order.getSymbol());
+
+            kafkaTemplate.send(topicName, order.getOrderId().toString(), orderJson);
+            logger.info("Order {} sent to topic: {}", order.getOrderId().toString(), topicName);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize order to JSON", e);
         }
     }
+
+    private String generateTopicName(String symbol) {
+        if (symbol == null || symbol.trim().isEmpty()) {
+            throw new IllegalArgumentException("Order symbol cannot be null or empty");
+        }
+        String cleanSymbol = symbol.replaceAll("[^a-zA-Z0-9]", "").toLowerCase();
+        return orderTopicPrefix + cleanSymbol;
+    }
+
 
     public void flushProducer() {
         kafkaTemplate.flush();

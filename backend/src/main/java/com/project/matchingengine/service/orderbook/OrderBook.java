@@ -69,7 +69,7 @@ public class OrderBook {
     public void matchBuyOrder(Order buyOrder) {
         while (!sellOrdersList.isEmpty() && buyOrder.getCurrentQuantity() > 0) {
             Order sellOrder = sellOrdersList.peek();
-            if (buyOrder.getPrice() >= sellOrder.getPrice()) {
+            if (buyOrder.getUserId() != sellOrder.getUserId() && buyOrder.getPrice() >= sellOrder.getPrice()) {
                 // Execute trade
                 int tradeQuantity = Math.min(buyOrder.getCurrentQuantity(), sellOrder.getCurrentQuantity());
                 double tradePrice = getTradePrice(buyOrder, sellOrder);
@@ -106,7 +106,7 @@ public class OrderBook {
     public void matchSellOrder(Order sellOrder) {
         while (!buyOrdersList.isEmpty() && sellOrder.getCurrentQuantity() > 0) {
             Order buyOrder = buyOrdersList.peek();
-            if (sellOrder.getPrice() <= buyOrder.getPrice()) {
+            if (buyOrder.getUserId() != sellOrder.getUserId() && sellOrder.getPrice() <= buyOrder.getPrice()) {
                 // Execute trade
                 int tradeQuantity = Math.min(sellOrder.getCurrentQuantity(), buyOrder.getCurrentQuantity());
                 double tradePrice = getTradePrice(buyOrder, sellOrder);

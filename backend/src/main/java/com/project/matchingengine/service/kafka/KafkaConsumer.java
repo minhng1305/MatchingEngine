@@ -37,10 +37,19 @@ public class KafkaConsumer {
         this.latch = latch;
     }
     
-    @KafkaListener( id = "orderSubmissionListener", topics = "${app.kafka.topics.order-submission}", groupId = "${spring.kafka.consumer.group-id}" )
+    @KafkaListener(
+            id = "orderSubmissionListener",
+            topics = "#{@topicListProvider.getTopics()}",
+            groupId = "${spring.kafka.consumer.group-id}",
+            containerFactory = "kafkaListenerContainerFactory"
+    )
     public void processOrder(String orderJson) {
         try {
             Order order = objectMapper.readValue(orderJson, Order.class);
+
+            logger.info("Processing order from symbol-specific topic: {} for symbol: {}",
+                    order.getOrderId(), order.getSymbol());
+
             OrderBook orderBook = orderBookConfig.getOrderBook(order.getSymbol());
 
             if (latch != null) {
