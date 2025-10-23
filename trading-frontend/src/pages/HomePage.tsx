@@ -9,75 +9,71 @@ const HomePage: React.FC = () => {
     const [stocks, setStocks] = useState<Stock[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [connectionStatus, setConnectionStatus] = useState('Disconnected');
+    const [connectionStatus, setConnectionStatus] = useState('Connecting...');
     const [priceChanges, setPriceChanges] = useState<Record<string, { prev: number; current: number }>>({});
-
     const navigate = useNavigate();
 
-    const { isConnected, subscribeToAllPrices } = useWebSocket({
-        onConnect: () => {
-            setConnectionStatus('Connected');
-            console.log('WebSocket connected successfully');
-        },
-        onDisconnect: () => {
-            setConnectionStatus('Disconnected');
-            console.log('WebSocket disconnected');
-        },
-        onError: (err) => {
-            console.error('WebSocket error:', err);
-            setConnectionStatus('Error');
-        },
-    });
+    // ✅ FIX 1: Remove useWebSocket options (we'll handle connection manually)
+    const { subscribeToMultiServerPrices } = useWebSocket();
 
     useEffect(() => {
         loadStocks();
     }, []);
 
+    // ✅ FIX 2: Connect immediately without waiting for isConnected
     useEffect(() => {
-        if (isConnected) {
-            console.log('Setting up price subscriptions...');
-            // Subscribe to real-time price updates
-            const subscriptionId = subscribeToAllPrices((priceData) => {
-                console.log('Received price update:', priceData);
-                if (priceData.prices) {
-                    setStocks(prevStocks => {
-                        const updatedStocks = prevStocks.map(stock => {
-                            const newPrice = priceData.prices[stock.symbol];
-                            if (newPrice && newPrice !== stock.currentPrice) {
-                                // Track price changes for visual indicators
-                                setPriceChanges(prev => ({
-                                    ...prev,
-                                    [stock.symbol]: {
-                                        prev: stock.currentPrice,
-                                        current: newPrice
-                                    }
-                                }));
+        console.log('Setting up multi-server price subscriptions...');
 
-                                return {
-                                    ...stock,
-                                    currentPrice: newPrice
-                                };
-                            }
-                            return stock;
-                        });
-                        return updatedStocks;
+        subscribeToMultiServerPrices((priceData) => {
+            console.log('📊 Received price update:', priceData);
+
+            // ✅ FIX 3: Update connection status on first message
+            setConnectionStatus('Connected');
+
+            if (priceData.prices) {
+                setStocks(prevStocks => {
+                    const updatedStocks = prevStocks.map(stock => {
+                        const newPrice = priceData.prices[stock.symbol];
+                        if (newPrice !== undefined && newPrice !== stock.currentPrice) {
+                            console.log(`💲 ${stock.symbol}: ${stock.currentPrice} → ${newPrice}`);
+
+                            // Track price changes for visual indicators
+                            setPriceChanges(prev => ({
+                                ...prev,
+                                [stock.symbol]: {
+                                    prev: stock.currentPrice,
+                                    current: newPrice
+                                }
+                            }));
+
+                            return {
+                                ...stock,
+                                currentPrice: newPrice
+                            };
+                        }
+                        return stock;
                     });
-                }
-            });
-
-            if (subscriptionId) {
-                console.log('Successfully subscribed to price updates:', subscriptionId);
+                    return updatedStocks;
+                });
             }
-        }
-    }, [isConnected, subscribeToAllPrices]);
+        }).then(subscriptionIds => {
+            console.log(`✅ Successfully subscribed to ${subscriptionIds.length} servers:`, subscriptionIds);
+            setConnectionStatus('Connected');
+        }).catch(err => {
+            console.error('❌ Failed to subscribe to multi-server prices:', err);
+            setConnectionStatus('Error');
+        });
+
+        // Cleanup is handled by useWebSocket hook
+    }, [subscribeToMultiServerPrices]);
 
     const loadStocks = async () => {
         try {
             setLoading(true);
             setError('');
-            console.log('Loading stocks from API...');
+            console.log('📡 Loading stocks from API...');
             const stocksData = await apiService.getAllStocks();
-            console.log('Loaded stocks:', stocksData);
+            console.log('✅ Loaded stocks:', stocksData);
             setStocks(stocksData);
 
             // Initialize price changes tracking
@@ -89,9 +85,8 @@ const HomePage: React.FC = () => {
                 };
             });
             setPriceChanges(initialChanges);
-
         } catch (err) {
-            console.error('Error loading stocks:', err);
+            console.error('❌ Error loading stocks:', err);
             setError(err instanceof Error ? err.message : 'Failed to load stocks');
         } finally {
             setLoading(false);
@@ -99,7 +94,7 @@ const HomePage: React.FC = () => {
     };
 
     const handleStockClick = (symbol: string) => {
-        console.log('Navigating to stock:', symbol);
+        console.log('🔍 Navigating to stock:', symbol);
         navigate(`/stock/${symbol}`);
     };
 
@@ -119,27 +114,35 @@ const HomePage: React.FC = () => {
         return '';
     };
 
+    const getStatusColor = () => {
+        if (connectionStatus === 'Connected') return '#10b981';
+        if (connectionStatus === 'Error') return '#ef4444';
+        return '#f59e0b'; // Orange for connecting
+    };
+
+    const getStatusEmoji = () => {
+        if (connectionStatus === 'Connected') return '🟢';
+        if (connectionStatus === 'Error') return '🔴';
+        return '🟡';
+    };
+
     if (loading) {
         return (
-            <div style={styles.container}>
-                <div style={styles.loading}>
-                    <div style={styles.spinner}></div>
-                    <p>Loading stocks...</p>
-                </div>
+            <div style={styles.loading}>
+                <div style={styles.spinner}></div>
+                <p>Loading stocks...</p>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div style={styles.container}>
-                <div style={styles.error}>
-                    <h3>Error Loading Stocks</h3>
-                    <p>{error}</p>
-                    <button onClick={loadStocks} style={styles.retryButton}>
-                        Try Again
-                    </button>
-                </div>
+            <div style={styles.error}>
+                <h2>Error Loading Stocks</h2>
+                <p>{error}</p>
+                <button style={styles.retryButton} onClick={loadStocks}>
+                    Try Again
+                </button>
             </div>
         );
     }
@@ -148,21 +151,17 @@ const HomePage: React.FC = () => {
         <div style={styles.container}>
             <div style={styles.header}>
                 <div>
-                    <h2 style={styles.title}>Live Stock Prices</h2>
-                    <p style={styles.subtitle}>
-                        Real-time updates • {stocks.length} stocks available
-                    </p>
+                    <h1 style={styles.title}>Live Stock Prices</h1>
+                    <p style={styles.subtitle}>Real-time updates • {stocks.length} stocks available</p>
                 </div>
                 <div style={styles.statusContainer}>
-                    <div style={{
-                        ...styles.status,
-                        color: connectionStatus === 'Connected' ? '#10b981' :
-                            connectionStatus === 'Error' ? '#ef4444' : '#f59e0b'
-                    }}>
-                        <span style={styles.statusDot}>●</span>
-                        {connectionStatus}
-                    </div>
-                    <button onClick={loadStocks} style={styles.refreshButton}>
+          <span style={{...styles.status, color: getStatusColor()}}>
+            <span style={styles.statusDot}>
+              {getStatusEmoji()}
+            </span>
+              {connectionStatus}
+          </span>
+                    <button style={styles.refreshButton} onClick={loadStocks}>
                         Refresh
                     </button>
                 </div>
@@ -172,25 +171,26 @@ const HomePage: React.FC = () => {
                 {stocks.map((stock) => (
                     <div
                         key={stock.symbol}
-                        style={{
-                            ...styles.stockCard,
-                            borderLeft: `4px solid ${getPriceChangeColor(stock.symbol)}`
-                        }}
+                        style={styles.stockCard}
                         onClick={() => handleStockClick(stock.symbol)}
                     >
                         <div style={styles.stockHeader}>
                             <h3 style={styles.symbol}>{stock.symbol}</h3>
                             <div style={styles.priceContainer}>
-                <span style={{
-                    ...styles.price,
-                    color: getPriceChangeColor(stock.symbol)
-                }}>
+                <span
+                    style={{
+                        ...styles.price,
+                        color: getPriceChangeColor(stock.symbol)
+                    }}
+                >
                   ${stock.currentPrice.toFixed(2)}
                 </span>
-                                <span style={{
-                                    ...styles.changeIndicator,
-                                    color: getPriceChangeColor(stock.symbol)
-                                }}>
+                                <span
+                                    style={{
+                                        ...styles.changeIndicator,
+                                        color: getPriceChangeColor(stock.symbol)
+                                    }}
+                                >
                   {getPriceChangeIndicator(stock.symbol)}
                 </span>
                             </div>
@@ -202,14 +202,13 @@ const HomePage: React.FC = () => {
                         </div>
                     </div>
                 ))}
+                {stocks.length === 0 && !loading && (
+                    <div style={styles.noStocks}>
+                        <h3>No Stocks Available</h3>
+                        <p>Please check your backend connection</p>
+                    </div>
+                )}
             </div>
-
-            {stocks.length === 0 && !loading && (
-                <div style={styles.noStocks}>
-                    <h3>No Stocks Available</h3>
-                    <p>Please check your backend connection</p>
-                </div>
-            )}
         </div>
     );
 };
@@ -247,7 +246,7 @@ const styles = {
     },
     status: {
         fontSize: '0.875rem',
-        fontWeight: '500',
+        fontWeight: '600' as const,
         display: 'flex',
         alignItems: 'center',
         gap: '0.5rem',
@@ -263,6 +262,7 @@ const styles = {
         borderRadius: '0.25rem',
         cursor: 'pointer',
         fontSize: '0.875rem',
+        fontWeight: '500' as const,
     },
     loading: {
         textAlign: 'center' as const,
@@ -293,6 +293,7 @@ const styles = {
         borderRadius: '0.25rem',
         cursor: 'pointer',
         marginTop: '1rem',
+        fontWeight: '500' as const,
     },
     stocksGrid: {
         display: 'grid',
@@ -307,10 +308,6 @@ const styles = {
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-        '&:hover': {
-            transform: 'translateY(-2px)',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-        },
     },
     stockHeader: {
         display: 'flex',
@@ -320,7 +317,7 @@ const styles = {
     },
     symbol: {
         fontSize: '1.25rem',
-        fontWeight: 'bold',
+        fontWeight: 'bold' as const,
         color: '#1f2937',
         margin: 0,
     },
@@ -331,11 +328,11 @@ const styles = {
     },
     price: {
         fontSize: '1.125rem',
-        fontWeight: 'bold',
+        fontWeight: 'bold' as const,
     },
     changeIndicator: {
         fontSize: '1rem',
-        fontWeight: 'bold',
+        fontWeight: 'bold' as const,
     },
     companyName: {
         color: '#6b7280',
@@ -358,7 +355,7 @@ const styles = {
     clickHint: {
         fontSize: '0.75rem',
         color: '#3b82f6',
-        fontWeight: '500',
+        fontWeight: '500' as const,
     },
     noStocks: {
         textAlign: 'center' as const,

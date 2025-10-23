@@ -2,6 +2,7 @@ package com.project.matchingengine.config;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -19,6 +20,9 @@ public class KafkaConsumerConfig {
     @Value("${spring.kafka.consumer.bootstrap-servers}")
     private String bootstrapServers;
 
+//    @Value("${app.kafka.topics.order-submission-prefix}")
+//    private String orderTopicPrefix;
+
     @Value("${spring.kafka.consumer.group-id}")
     private String consumerGroupId;
 
@@ -29,6 +33,7 @@ public class KafkaConsumerConfig {
         configProps.put(ConsumerConfig.GROUP_ID_CONFIG, consumerGroupId);
         configProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         configProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        configProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         return new DefaultKafkaConsumerFactory<>(configProps);
     }
 

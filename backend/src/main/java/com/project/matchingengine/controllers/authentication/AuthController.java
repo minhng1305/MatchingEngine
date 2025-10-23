@@ -44,17 +44,6 @@ public class AuthController
         this.passwordEncoder = passwordEncoder;
     }
 
-//    @PostMapping("register")
-//    public Map<String, Object> registerHandler(@RequestBody User user)
-//    {
-//        String encodedPass = passwordEncoder.encode(user.getPassword());
-//        user.setPassword(encodedPass);
-//        user = userRepo.save(user);
-//
-//        String token = jwtUtil.generateToken(user.getUsername());
-//        return Collections.singletonMap("jwt-token",token);
-//    }
-
     @PostMapping("/register")
     public ResponseEntity<?> registerHandler(@RequestBody Map<String, String> userData) {
         try {
@@ -94,22 +83,6 @@ public class AuthController
             ));
         }
     }
-
-//    @PostMapping("login")
-//    public Map<String,Object> loginHandler(@RequestBody LoginCredentials body)
-//    {
-//        try
-//        {
-//            UsernamePasswordAuthenticationToken authInputToken = new UsernamePasswordAuthenticationToken(body.getUsername(), body.getPassword());
-//            authenticationManager.authenticate(authInputToken);
-//            logger.info("User "+body.getUsername()+" logged in successfully.");
-//            String token = jwtUtil.generateToken(body.getUsername());
-//            return Collections.singletonMap("jwt-token",token);
-//        } catch(AuthenticationException authExc) {
-//            logger.error("User "+body.getUsername()+" failed to log in.");
-//            throw new RuntimeException("Invalid username/password.");
-//        }
-//    }
 
     @PostMapping("/login")
     public ResponseEntity<?> loginHandler(@RequestBody LoginCredentials body) {
