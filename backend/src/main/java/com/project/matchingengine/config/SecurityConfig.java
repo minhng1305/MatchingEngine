@@ -22,9 +22,6 @@ import java.util.Arrays;
 import com.project.matchingengine.utils.JwtFilter;
 import com.project.matchingengine.repository.authentication.UserRepo;
 
-import jakarta.servlet.http.HttpServletResponse;
-
-
 @Configuration
 public class SecurityConfig {
 
@@ -38,28 +35,6 @@ public class SecurityConfig {
         this.filter = filter;
         this.userDetailService = userDetailService;
     }
-
-//    @Bean
-//    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-//        http
-//                .csrf(csrf -> csrf.disable())
-//                .httpBasic(httpBasic -> httpBasic.disable())
-//                .cors(Customizer.withDefaults())
-//                .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers("/api/auth/**").permitAll()
-//                        .requestMatchers("/ws/**").permitAll()
-//                        .requestMatchers("/api/user/**").hasRole("USER")
-//                        .anyRequest().authenticated())
-//                .userDetailsService(userDetailService)
-//                .exceptionHandling(exceptionHandling -> exceptionHandling
-//                        .authenticationEntryPoint((request, response, authException) ->
-//                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized")))
-//                .sessionManagement(sessionManagement -> sessionManagement
-//                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-//
-//        http.addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
-//        return http.build();
-//    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
