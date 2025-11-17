@@ -78,10 +78,16 @@ public class OrderBook {
                                         tradePrice, 
                                         tradeQuantity, 
                                         buyOrder.getOrderId(), 
-                                        sellOrder.getOrderId(), 
+                                        sellOrder.getOrderId(),
+                                        buyOrder.getUserId(),
+                                        sellOrder.getUserId(),
                                         new Timestamp(System.currentTimeMillis()));
                 trades.add(trade);
                 tradeService.saveTrade(trade);
+
+                // Update capital and ESG points for both users
+                // userService.updateUserCapital();
+
 
                 // Update order statuses and quantities
                 buyOrder.setStatus(OrderStatus.PARTIALLY_FILLED);
@@ -114,7 +120,9 @@ public class OrderBook {
                                         this.symbol,
                                         tradePrice, tradeQuantity, 
                                         buyOrder.getOrderId(), 
-                                        sellOrder.getOrderId(), 
+                                        sellOrder.getOrderId(),
+                                        buyOrder.getUserId(),
+                                        sellOrder.getUserId(),
                                         new Timestamp(System.currentTimeMillis()));
                 trades.add(trade);
                 tradeService.saveTrade(trade);

@@ -20,9 +20,6 @@ public class KafkaConsumerConfig {
     @Value("${spring.kafka.consumer.bootstrap-servers}")
     private String bootstrapServers;
 
-//    @Value("${app.kafka.topics.order-submission-prefix}")
-//    private String orderTopicPrefix;
-
     @Value("${spring.kafka.consumer.group-id}")
     private String consumerGroupId;
 

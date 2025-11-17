@@ -29,9 +29,16 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-//    private double currentCapital = 0.0;
-//
-//    private int currEsgPoints = 0;
+    @Column(name = "ledger_balance",nullable = false)
+    private double ledgerBalance = 0.0;
+
+
+    @Column(name = "available_balance",nullable = false)
+    private double availableBalance = 0.0;
+
+
+    @Column(name = "current_esg_points", nullable = false)
+    private int currEsgPoints = 0;
 
     public String getEmail() {
         return email;
@@ -57,19 +64,27 @@ public class User {
         this.password = password;
     }
 
-//    public double getCurrentCapital() {
-//        return currentCapital;
-//    }
-//
-//    public void setCurrentCapital(double currentCapital) {
-//        this.currentCapital = currentCapital;
-//    }
-//
-//    public int getCurrEsgPoints() {
-//        return currEsgPoints;
-//    }
-//
-//    public void setCurrEsgPoints(int currEsgPoints) {
-//        this.currEsgPoints = currEsgPoints;
-//    }
+    public double getLedgerBalance() {
+        return ledgerBalance;
+    }
+
+    public void setLedgerBalance(double ledgerBalance) {
+        this.ledgerBalance = ledgerBalance;
+    }
+
+    public double getAvailableBalance() {
+        return availableBalance;
+    }
+
+    public void setAvailableBalance(double availableBalance) {
+        this.availableBalance = availableBalance;
+    }
+
+    public int getCurrEsgPoints() {
+        return currEsgPoints;
+    }
+
+    public void setCurrEsgPoints(int currEsgPoints) {
+        this.currEsgPoints = currEsgPoints;
+    }
 }

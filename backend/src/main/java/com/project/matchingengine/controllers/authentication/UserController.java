@@ -10,6 +10,7 @@ import com.project.matchingengine.models.order.Trade;
 
 import java.util.*;
 
+import com.project.matchingengine.service.authentication.CustomedUserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,13 +25,15 @@ public class UserController
     private final UserRepo userRepo;
     private final OrderRepo orderRepo;
     private final TradeRepo tradeRepo;
+    private final CustomedUserDetailsService customedUserDetailsService;
 
     @Autowired
-    public UserController(UserRepo userRepo, OrderRepo orderRepo, TradeRepo tradeRepo)
+    public UserController(UserRepo userRepo, OrderRepo orderRepo, TradeRepo tradeRepo, CustomedUserDetailsService customedUserDetailsService)
     {
         this.userRepo = userRepo;
         this.orderRepo = orderRepo;
         this.tradeRepo = tradeRepo;
+        this.customedUserDetailsService = customedUserDetailsService;
     }
 
     @GetMapping("/info")
@@ -50,6 +53,8 @@ public class UserController
             userInfo.put("userId", user.getUserId().toString());
             userInfo.put("username", user.getUsername());
             userInfo.put("email", user.getEmail());
+            userInfo.put("ledgerBalance", user.getLedgerBalance());
+            userInfo.put("availableBalance", user.getAvailableBalance());
 
             return ResponseEntity.ok(userInfo);
         } catch (Exception e) {
@@ -71,8 +76,7 @@ public class UserController
 
             // Get user's orders and trades
             List<Order> userOrders = orderRepo.findByUserIdOrderByOrderTimestampDesc(user.getUserId());
-            List<Trade> userTrades = tradeRepo.findByBuyOrderUserIdOrSellOrderUserIdOrderByTradeTimestampDesc(
-                    user.getUserId(), user.getUserId());
+            List<Trade> userTrades = tradeRepo.findByBuyerUserIdOrSellerUserIdOrderByTradeTimestampDesc(user.getUserId(), user.getUserId());
 
             // Calculate statistics
             long totalOrders = userOrders.size();
@@ -92,7 +96,9 @@ public class UserController
             profile.put("user", Map.of(
                     "userId", user.getUserId().toString(),
                     "username", user.getUsername(),
-                    "email", user.getEmail()
+                    "email", user.getEmail(),
+                    "ledgerBalance", user.getLedgerBalance(),
+                    "availableBalance", user.getAvailableBalance()
             ));
             profile.put("statistics", Map.of(
                     "totalOrders", totalOrders,
@@ -140,12 +146,37 @@ public class UserController
             }
 
             User user = userOpt.get();
-            List<Trade> trades = tradeRepo.findByBuyOrderUserIdOrSellOrderUserIdOrderByTradeTimestampDesc(
-                    user.getUserId(), user.getUserId());
+            List<Trade> trades = tradeRepo.findByBuyerUserIdOrSellerUserIdOrderByTradeTimestampDesc(user.getUserId(), user.getUserId());
 
             return ResponseEntity.ok(trades);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", "Failed to get user trades"));
+        }
+    }
+
+    // TODO: Verify this endpoint for updating user balance
+    @PostMapping("/add-balance") // More descriptive endpoint name
+    public ResponseEntity<?> addBalance(@RequestBody Map<String, Double> request) {
+        try {
+            String userName = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            User user = userRepo.findByUsername(userName)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            Double amount = request.get("amount");
+            if (amount == null || amount <= 0) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid amount specified."));
+            }
+
+            User updatedUser = customedUserDetailsService.addFunds(user.getUserId(), amount);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Balance updated successfully.",
+                    "newLedgerBalance", updatedUser.getLedgerBalance(),
+                    "newAvailableBalance", updatedUser.getAvailableBalance()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Failed to add balance: " + e.getMessage()));
         }
     }
 }
