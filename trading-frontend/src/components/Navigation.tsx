@@ -13,7 +13,7 @@ const Navigation: React.FC = () => {
     return (
         <nav style={styles.nav}>
             <div style={styles.container}>
-                <h1 style={styles.title}>TradePro</h1>
+                <h1 style={styles.title}>GreenTrader</h1>
                 <div style={styles.userSection}>
                     {/* ✅ CHANGED: Made username clickable */}
                     <span

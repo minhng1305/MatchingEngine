@@ -66,7 +66,7 @@ const LoginPage: React.FC = () => {
         <div style={styles.container}>
             <div style={styles.loginBox}>
                 <h1 style={styles.title}>
-                    {isLogin ? 'TradePro Login' : 'TradePro Register'}
+                    {isLogin ? 'GreenTrader Login' : 'GreenTrader Register'}
                 </h1>
 
                 {error && (
