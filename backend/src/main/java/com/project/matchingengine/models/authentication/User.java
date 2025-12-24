@@ -30,11 +30,11 @@ public class User {
     private String password;
 
     @Column(name = "ledger_balance",nullable = false)
-    private double ledgerBalance = 0.0;
+    private double ledgerBalance = 1000000.0;
 
 
     @Column(name = "available_balance",nullable = false)
-    private double availableBalance = 0.0;
+    private double availableBalance = 1000000.0;
 
 
     @Column(name = "current_esg_points", nullable = false)

@@ -3,19 +3,11 @@
 """
 Multi-Server Matching Engine Stress Test
 ========================================
-
-This script performs comprehensive stress testing against 3 parallel matching engine servers:
-- Server 1: localhost:8080 (handles symbols: AAPL, MSFT, GOOGL, AMZN, TSLA, etc.)
-- Server 2: localhost:8081 (handles symbols: CVX, PFE, KO, PEP, COST, etc.) 
-- Server 3: localhost:8082 (handles symbols: BKNG, GILD, ADP, MDLZ, REGN, etc.)
-
 Features:
-- JWT Authentication
-- Load balancing across 3 servers
-- 50 concurrent threads
-- 5000 total orders
-- Comprehensive performance metrics
-- Server-specific routing based on symbols
+- 50 Concurrent Threads representing 50 Unique Users.
+- Automatic User Registration & Authentication.
+- **Data Seeding**: Automatically adds funds ($1M) and stocks (5000 qty) to each user.
+- Load Balancing: Routes orders to specific servers based on symbol.
 """
 
 import requests
@@ -30,6 +22,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import List, Dict, Any
 import sys
+import traceback
 
 # ===============================
 # Configuration
@@ -42,7 +35,7 @@ class ServerConfig:
     base_url: str
     assigned_symbols: List[str]
 
-# Server configurations based on your setup
+# Server configurations
 SERVERS = [
     ServerConfig(
         port=8080,
@@ -50,21 +43,21 @@ SERVERS = [
         assigned_symbols=["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NFLX"]
     ),
     ServerConfig(
-        port=8081, 
+        port=8081,
         base_url="http://localhost:8081",
-        assigned_symbols=["NVDA", "AMD", "INTC", "IBM", "ORCL", "CSCO", "SAP"]  # Add more symbols as per your server2 config
+        assigned_symbols=["NVDA", "AMD", "INTC", "IBM", "ORCL", "CSCO", "SAP"]
     ),
     ServerConfig(
         port=8082,
-        base_url="http://localhost:8082", 
-        assigned_symbols=["ADOBE", "CRM", "TWTR", "SNAP", "BABA", "TCEHY"]  # Add more symbols as per your server3 config
+        base_url="http://localhost:8082",
+        assigned_symbols=["ADOBE", "CRM", "TWTR", "SNAP", "BABA", "TCEHY"]
     )
 ]
 
-# All possible symbols from your Stock enum
-ALL_SYMBOLS = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NFLX",
-               "NVDA", "AMD", "INTC", "IBM", "ORCL", "CSCO", "SAP",
-               "ADOBE", "CRM", "TWTR", "SNAP", "BABA", "TCEHY"]
+# All possible symbols
+ALL_SYMBOLS = []
+for s in SERVERS:
+    ALL_SYMBOLS.extend(s.assigned_symbols)
 
 # Order configuration
 ORDER_SIDES = ["BUY", "SELL"]
@@ -75,95 +68,92 @@ NUM_THREADS = 50
 TOTAL_ORDERS = 5000
 ORDERS_PER_THREAD = TOTAL_ORDERS // NUM_THREADS
 
-# Authentication configuration
-TEST_USER = {
-    "username": f"testuser_{int(time.time())}",
-    "email": f"test_{int(time.time())}@example.com", 
-    "password": "testpassword123"
-}
-
 # ===============================
 # Helper Classes
 # ===============================
 
 class AuthenticationManager:
-    """Manages JWT authentication across all servers"""
-    
-    def __init__(self):
-        self.tokens = {}  # server_url -> token
+    """Manages JWT authentication for a SINGLE user across all servers"""
+
+    def __init__(self, thread_id):
+        self.tokens = {}    # server_url -> token
         self.user_ids = {}  # server_url -> user_id
-        
+        self.thread_id = thread_id
+        # Unique user credentials for this thread
+        self.username = f"user_thread_{thread_id}_{int(time.time())}"
+        self.email = f"user_{thread_id}_{int(time.time())}@example.com"
+        self.password = "password123"
+
     def register_and_login(self, server_config: ServerConfig) -> bool:
         """Register and login to get JWT token for a server"""
         try:
             # Register user
             register_url = f"{server_config.base_url}/api/auth/register"
-            register_data = TEST_USER.copy()
-            
+            register_data = {
+                "username": self.username,
+                "email": self.email,
+                "password": self.password
+            }
+
             response = requests.post(
                 register_url,
                 json=register_data,
                 headers={"Content-Type": "application/json"},
                 timeout=10
             )
-            
+
             if response.status_code == 200:
                 data = response.json()
                 self.tokens[server_config.base_url] = data["token"]
                 self.user_ids[server_config.base_url] = data["user"]["userId"]
-                print(f"✅ Successfully authenticated with {server_config.base_url}")
                 return True
             else:
-                # Try login if registration failed (user might already exist)
+                # If registration fails, try login (in case user persists from previous run)
                 return self._login(server_config)
-                
+
         except Exception as e:
-            print(f"❌ Authentication failed for {server_config.base_url}: {e}")
+            print(f"❌ [Thread {self.thread_id}] Auth failed for {server_config.base_url}: {e}")
             return False
-    
+
     def _login(self, server_config: ServerConfig) -> bool:
         """Login with existing credentials"""
         try:
             login_url = f"{server_config.base_url}/api/auth/login"
             login_data = {
-                "username": TEST_USER["username"],
-                "password": TEST_USER["password"]
+                "username": self.username,
+                "password": self.password
             }
-            
+
             response = requests.post(
                 login_url,
                 json=login_data,
                 headers={"Content-Type": "application/json"},
                 timeout=10
             )
-            
+
             if response.status_code == 200:
                 data = response.json()
                 self.tokens[server_config.base_url] = data["token"]
                 self.user_ids[server_config.base_url] = data["user"]["userId"]
-                print(f"✅ Successfully logged in to {server_config.base_url}")
                 return True
             else:
-                print(f"❌ Login failed for {server_config.base_url}: {response.status_code}")
+                print(f"❌ [Thread {self.thread_id}] Login failed: {response.status_code}")
                 return False
-                
+
         except Exception as e:
-            print(f"❌ Login failed for {server_config.base_url}: {e}")
+            print(f"❌ [Thread {self.thread_id}] Login exception: {e}")
             return False
-    
+
     def get_auth_headers(self, server_url: str) -> Dict[str, str]:
-        """Get authentication headers for a server"""
         token = self.tokens.get(server_url)
         if not token:
             raise ValueError(f"No authentication token for {server_url}")
-        
         return {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json"
         }
-    
+
     def get_user_id(self, server_url: str) -> str:
-        """Get user ID for a server"""
         user_id = self.user_ids.get(server_url)
         if not user_id:
             raise ValueError(f"No user ID for {server_url}")
@@ -171,313 +161,260 @@ class AuthenticationManager:
 
 class LoadBalancer:
     """Routes orders to appropriate servers based on symbol"""
-    
     def __init__(self, servers: List[ServerConfig]):
         self.servers = servers
         self.symbol_to_server = {}
         
-        # Build symbol routing table
+        # Map symbols to servers
         for server in servers:
             for symbol in server.assigned_symbols:
                 self.symbol_to_server[symbol] = server
-        
-        print("📊 Symbol-to-Server Routing:")
-        for symbol, server in self.symbol_to_server.items():
-            print(f"  {symbol} -> {server.base_url}")
-    
+
     def get_server_for_symbol(self, symbol: str) -> ServerConfig:
-        """Get the appropriate server for a symbol"""
-        server = self.symbol_to_server.get(symbol)
-        if not server:
-            # Fallback to first server if symbol not found
-            print(f"⚠️  Symbol {symbol} not found in routing table, using fallback server")
-            return self.servers[0]
-        return server
+        return self.symbol_to_server.get(symbol, self.servers[0])  # Default to first if not found
 
 # ===============================
-# Order Generation
+# Data Seeding Helper
 # ===============================
 
-def generate_order(user_id: str) -> Dict[str, Any]:
-    """Generate a random order"""
-    symbol = random.choice(ALL_SYMBOLS)
-    side = random.choice(ORDER_SIDES)
-    order_type = random.choice(ORDER_TYPES)
-    price = round(random.uniform(50, 500), 2)
-    quantity = random.randint(10, 1000)
+def seed_user_account(auth_manager: AuthenticationManager):
+    """
+    Grants the user massive balance and a portfolio of stocks
+    so they can actually trade.
+    """
+    initial_cash = 1_000_000.00  # Give them $1 Million
+    initial_stock_qty = 5000     # Give them 5000 shares of each stock
     
-    order = {
-        "symbol": symbol,
-        "side": side,
-        "type": order_type,
-        "price": price,
-        "quantity": quantity,
-        "userId": user_id
-    }
+    # Iterate through all servers to seed data on every shard/server
+    # Note: In a real distributed system, user data might be centralized.
+    # Here we assume we just need to hit one valid endpoint or all if sharded.
+    # We will try to seed via the first successful connection.
     
-    return order
-
-# ===============================
-# Worker Functions
-# ===============================
-
-def worker_thread(
-    thread_id: int,
-    orders_count: int,
-    auth_manager: AuthenticationManager,
-    load_balancer: LoadBalancer,
-    results_queue: List[Dict]
-) -> None:
-    """Worker thread that submits orders"""
+    seeded_any = False
     
-    print(f"[Thread {thread_id}] Starting, will send {orders_count} orders")
-    
-    successful = 0
-    failed = 0
-    response_times = []
-    server_stats = {server.base_url: {"success": 0, "failed": 0} for server in SERVERS}
-    errors = []
-    
-    for i in range(orders_count):
+    for server in SERVERS:
         try:
-            # Generate order
-            # Use first server's user_id (all servers should have same user after registration)
-            user_id = auth_manager.get_user_id(SERVERS[0].base_url)
-            order = generate_order(user_id)
+            base_url = server.base_url
+            if base_url not in auth_manager.tokens:
+                continue
+
+            user_id = auth_manager.get_user_id(base_url)
+            headers = auth_manager.get_auth_headers(base_url)
             
-            # Route to appropriate server
-            target_server = load_balancer.get_server_for_symbol(order["symbol"])
-            submit_url = f"{target_server.base_url}/api/orders/submit"
+            # ---------------------------------------------------
+            # 1. SEED CASH (for Buy Orders)
+            # ---------------------------------------------------
+            deposit_payload = {
+                "userId": user_id,
+                "amount": initial_cash
+            }
             
-            # Get auth headers
-            headers = auth_manager.get_auth_headers(target_server.base_url)
-            
-            # Submit order
-            start_time = time.time()
-            response = requests.post(
-                submit_url,
-                json=order,
+            resp_cash = requests.post(
+                f"{base_url}/api/user/add-balance", 
+                json=deposit_payload, 
                 headers=headers,
-                timeout=30  # Increased timeout for stress test
+                timeout=5
             )
-            end_time = time.time()
             
-            response_time_ms = (end_time - start_time) * 1000
-            response_times.append(response_time_ms)
+            if resp_cash.status_code == 200:
+                 seeded_any = True
             
-            if response.status_code in [200, 201]:
-                successful += 1
-                server_stats[target_server.base_url]["success"] += 1
-            else:
-                failed += 1
-                server_stats[target_server.base_url]["failed"] += 1
-                errors.append({
-                    "thread_id": thread_id,
-                    "order_num": i + 1,
-                    "status_code": response.status_code,
-                    "server": target_server.base_url,
-                    "symbol": order["symbol"],
-                    "error": response.text[:200]  # First 200 chars of error
-                })
+            # ---------------------------------------------------
+            # 2. SEED STOCKS (for Sell Orders)
+            # ---------------------------------------------------
+            # We give the user stocks for every symbol managed by THIS server
+            for symbol in server.assigned_symbols:
+                portfolio_payload = {
+                    "userId": user_id,
+                    "symbol": symbol,
+                    "quantity": initial_stock_qty
+                }
                 
+                requests.post(
+                    f"{base_url}/api/user/add-stocks", 
+                    json=portfolio_payload, 
+                    headers=headers,
+                    timeout=5
+                )
+                
+            # If your user DB is shared, seeding once might be enough. 
+            # If sharded, you might need to seed on all. 
+            # Assuming shared DB for Auth/User, we assume cash is global, but stocks might be per engine?
+            # Safe bet: Seed stocks on the server that manages them.
+            
         except Exception as e:
-            failed += 1
-            errors.append({
-                "thread_id": thread_id,
-                "order_num": i + 1,
-                "exception": str(e),
-                "server": target_server.base_url if 'target_server' in locals() else "unknown"
-            })
-    
-    print(f"[Thread {thread_id}] Completed. Success: {successful}, Failed: {failed}")
-    
-    # Thread-safe results collection
-    results_queue.append({
-        "thread_id": thread_id,
-        "successful": successful,
-        "failed": failed,
-        "response_times": response_times,
-        "server_stats": server_stats,
-        "errors": errors
-    })
+            print(f"⚠️ [Thread {auth_manager.thread_id}] Failed to seed on {server.base_url}: {e}")
+
+    if seeded_any:
+        pass # print(f"💰 [Thread {auth_manager.thread_id}] Seeded successfully.")
 
 # ===============================
-# Main Test Orchestrator
+# Worker Thread
+# ===============================
+
+def worker_thread(thread_id: int, num_orders: int, load_balancer: LoadBalancer, results_queue: List[Dict]):
+    """
+    Worker thread that simulates a SINGLE unique user.
+    1. Authenticates as a new user.
+    2. Seeds account with funds/stocks.
+    3. Sends orders.
+    """
+    
+    # 1. Initialize per-thread Authentication Manager (Unique User)
+    auth_manager = AuthenticationManager(thread_id)
+    
+    # Authenticate with ALL servers
+    auth_success_count = 0
+    for server in SERVERS:
+        if auth_manager.register_and_login(server):
+            auth_success_count += 1
+            
+    if auth_success_count == 0:
+        print(f"❌ [Thread {thread_id}] Failed to auth with ANY server. Aborting.")
+        return
+
+    # 2. Seed Data (Money & Stocks)
+    seed_user_account(auth_manager)
+
+    # 3. Prepare Stats
+    stats = {
+        "successful": 0,
+        "failed": 0,
+        "response_times": [],
+        "server_stats": {s.base_url: {"success": 0, "failed": 0} for s in SERVERS},
+        "errors": []
+    }
+
+    # 4. Send Orders
+    for i in range(num_orders):
+        try:
+            # Generate random order details
+            symbol = random.choice(ALL_SYMBOLS)
+            side = random.choice(ORDER_SIDES)
+            type_ = random.choice(ORDER_TYPES)
+            price = round(random.uniform(10.0, 1000.0), 2)
+            quantity = random.randint(1, 100)
+
+            # Route to correct server
+            target_server = load_balancer.get_server_for_symbol(symbol)
+            server_url = target_server.base_url
+            
+            # Prepare payload
+            try:
+                user_id = auth_manager.get_user_id(server_url)
+                headers = auth_manager.get_auth_headers(server_url)
+            except ValueError:
+                stats["failed"] += 1
+                stats["server_stats"][server_url]["failed"] += 1
+                continue
+
+            order_payload = {
+                "userId": user_id,
+                "symbol": symbol,
+                "price": price,
+                "quantity": quantity,
+                "side": side,
+                "type": type_
+            }
+
+            # Measure request latency
+            req_start = time.time()
+            response = requests.post(
+                f"{server_url}/api/orders/submit",
+                json=order_payload,
+                headers=headers,
+                timeout=5
+            )
+            req_end = time.time()
+            duration_ms = (req_end - req_start) * 1000
+
+            if response.status_code == 200:
+                stats["successful"] += 1
+                stats["response_times"].append(duration_ms)
+                stats["server_stats"][server_url]["success"] += 1
+            else:
+                stats["failed"] += 1
+                stats["server_stats"][server_url]["failed"] += 1
+                stats["errors"].append({
+                    "thread_id": thread_id,
+                    "status": response.status_code,
+                    "msg": response.text[:100]
+                })
+
+        except Exception as e:
+            stats["failed"] += 1
+            stats["errors"].append({"thread_id": thread_id, "error": str(e)})
+            
+        time.sleep(random.uniform(0.001, 0.01))
+
+    results_queue.append(stats)
+    print(f"✅ [Thread {thread_id}] Finished {num_orders} orders.")
+
+# ===============================
+# Main Execution
 # ===============================
 
 def main():
-    """Main test execution function"""
-    
-    print("🚀 Multi-Server Matching Engine Stress Test")
+    print("🚀 Multi-Server Matching Engine Stress Test (Unique Users Mode)")
     print("=" * 60)
     print(f"Configuration:")
-    print(f"  • Threads: {NUM_THREADS}")
-    print(f"  • Total Orders: {TOTAL_ORDERS}")
-    print(f"  • Orders per Thread: {ORDERS_PER_THREAD}")
-    print(f"  • Servers: {len(SERVERS)}")
-    for server in SERVERS:
-        print(f"    - {server.base_url} ({len(server.assigned_symbols)} symbols)")
-    print()
+    print(f" • Threads (Unique Users): {NUM_THREADS}")
+    print(f" • Orders per Thread: {ORDERS_PER_THREAD}")
+    print(f" • Total Orders: {TOTAL_ORDERS}")
     
-    # Initialize components
-    auth_manager = AuthenticationManager()
     load_balancer = LoadBalancer(SERVERS)
-    
-    # Step 1: Authenticate with all servers
-    print("🔐 Authenticating with all servers...")
-    
-    authentication_failed = False
-    for server in SERVERS:
-        if not auth_manager.register_and_login(server):
-            print(f"❌ Failed to authenticate with {server.base_url}")
-            authentication_failed = True
-    
-    if authentication_failed:
-        print("❌ Authentication failed for some servers. Exiting.")
-        sys.exit(1)
-    
-    print(f"✅ Authentication successful for all {len(SERVERS)} servers\n")
-    
-    # Step 2: Start stress test
-    print("🔥 Starting stress test...")
-    results_queue = []  # Thread-safe list for results
+    results_queue = []
     
     start_time = time.time()
-    
-    # Use ThreadPoolExecutor for better thread management
+
+    print(f"\n🔥 Starting {NUM_THREADS} threads...")
+
     with ThreadPoolExecutor(max_workers=NUM_THREADS) as executor:
         futures = []
-        
         for thread_id in range(NUM_THREADS):
             future = executor.submit(
                 worker_thread,
                 thread_id + 1,
                 ORDERS_PER_THREAD,
-                auth_manager,
                 load_balancer,
                 results_queue
             )
             futures.append(future)
-        
-        # Wait for all threads to complete
+
         for future in as_completed(futures):
             try:
-                future.result()  # This will raise any exceptions that occurred
+                future.result()
             except Exception as e:
-                print(f"❌ Thread failed with exception: {e}")
-    
+                print(f"❌ Thread exception: {e}")
+
     end_time = time.time()
     total_duration = end_time - start_time
-    
-    # Step 3: Aggregate and display results
+
+    # --- RESULTS REPORTING ---
     print("\n" + "=" * 60)
     print("📊 STRESS TEST RESULTS")
     print("=" * 60)
-    
-    # Aggregate results
-    total_successful = sum(result["successful"] for result in results_queue)
-    total_failed = sum(result["failed"] for result in results_queue)
+
+    total_successful = sum(r["successful"] for r in results_queue)
+    total_failed = sum(r["failed"] for r in results_queue)
     all_response_times = []
-    server_aggregate = {server.base_url: {"success": 0, "failed": 0} for server in SERVERS}
-    all_errors = []
     
-    for result in results_queue:
-        all_response_times.extend(result["response_times"])
-        all_errors.extend(result["errors"])
-        
-        for server_url, stats in result["server_stats"].items():
-            server_aggregate[server_url]["success"] += stats["success"]
-            server_aggregate[server_url]["failed"] += stats["failed"]
-    
-    # Calculate performance metrics
+    for r in results_queue:
+        all_response_times.extend(r["response_times"])
+
     if all_response_times:
         avg_response = mean(all_response_times)
-        median_response = median(all_response_times)
-        min_response = min(all_response_times)
-        max_response = max(all_response_times)
-        std_dev = stdev(all_response_times) if len(all_response_times) > 1 else 0
-        
-        # Percentiles
-        sorted_times = sorted(all_response_times)
-        p95 = sorted_times[int(0.95 * len(sorted_times))] if sorted_times else 0
-        p99 = sorted_times[int(0.99 * len(sorted_times))] if sorted_times else 0
     else:
-        avg_response = median_response = min_response = max_response = std_dev = p95 = p99 = 0
-    
-    throughput = TOTAL_ORDERS / total_duration if total_duration > 0 else 0
-    success_rate = (total_successful / TOTAL_ORDERS) * 100 if TOTAL_ORDERS > 0 else 0
-    
-    # Display overall results
-    print(f"⏱️  Total Duration: {total_duration:.2f} seconds")
-    print(f"📈 Throughput: {throughput:.2f} orders/second")
-    print(f"✅ Success Rate: {success_rate:.1f}% ({total_successful}/{TOTAL_ORDERS})")
-    print(f"❌ Failed Orders: {total_failed}")
-    
-    print(f"\n📊 Response Time Statistics:")
-    print(f"  Average: {avg_response:.2f}ms")
-    print(f"  Median:  {median_response:.2f}ms")
-    print(f"  Min:     {min_response:.2f}ms")
-    print(f"  Max:     {max_response:.2f}ms")
-    print(f"  95th %%:  {p95:.2f}ms")
-    print(f"  99th %%:  {p99:.2f}ms")
-    print(f"  Std Dev: {std_dev:.2f}ms")
-    
-    print(f"\n🏗️  Per-Server Statistics:")
-    for server_url, stats in server_aggregate.items():
-        total_server_orders = stats["success"] + stats["failed"]
-        server_success_rate = (stats["success"] / total_server_orders * 100) if total_server_orders > 0 else 0
-        print(f"  {server_url}:")
-        print(f"    Success: {stats['success']} ({server_success_rate:.1f}%)")
-        print(f"    Failed:  {stats['failed']}")
-    
-    # Display sample errors if any
-    if all_errors and len(all_errors) > 0:
-        print(f"\n❗ Sample Errors (showing first 5 of {len(all_errors)}):")
-        for error in all_errors[:5]:
-            print(f"  Thread {error.get('thread_id', '?')}: {error}")
-    
-    # Performance assessment
-    print(f"\n🎯 Performance Assessment:")
-    if success_rate >= 95:
-        print("  🟢 Excellent: >95% success rate")
-    elif success_rate >= 90:
-        print("  🟡 Good: 90-95% success rate")  
-    elif success_rate >= 80:
-        print("  🟠 Fair: 80-90% success rate")
-    else:
-        print("  🔴 Poor: <80% success rate")
-    
-    if avg_response <= 100:
-        print("  🟢 Excellent response time: <100ms average")
-    elif avg_response <= 500:
-        print("  🟡 Good response time: 100-500ms average")
-    elif avg_response <= 1000:
-        print("  🟠 Fair response time: 500-1000ms average") 
-    else:
-        print("  🔴 Poor response time: >1000ms average")
-    
-    if throughput >= 100:
-        print("  🟢 Excellent throughput: >100 orders/second")
-    elif throughput >= 50:
-        print("  🟡 Good throughput: 50-100 orders/second")
-    elif throughput >= 20:
-        print("  🟠 Fair throughput: 20-50 orders/second")
-    else:
-        print("  🔴 Poor throughput: <20 orders/second")
-    
-    print("=" * 60)
-    print("✅ Stress test completed!")
+        avg_response = 0
 
-# ===============================
-# Entry Point
-# ===============================
+    throughput = total_successful / total_duration if total_duration > 0 else 0
+    
+    print(f"⏱️ Total Duration: {total_duration:.2f}s")
+    print(f"📈 Throughput: {throughput:.2f} orders/sec")
+    print(f"✅ Successful: {total_successful}")
+    print(f"❌ Failed: {total_failed}")
+    print(f"📊 Avg Latency: {avg_response:.2f}ms")
+    print("=" * 60)
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("\n⚠️  Test interrupted by user")
-    except Exception as e:
-        print(f"\n❌ Test failed with error: {e}")
-        import traceback
-        traceback.print_exc()
+    main()

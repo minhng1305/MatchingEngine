@@ -14,6 +14,7 @@ import com.project.matchingengine.models.order.OrderBookSummary;
 import com.project.matchingengine.models.order.OrderSide;
 import com.project.matchingengine.models.order.OrderStatus;
 import com.project.matchingengine.models.order.Trade;
+import com.project.matchingengine.service.authentication.CustomedUserDetailsService;
 
 
 public class OrderBook {
@@ -24,10 +25,11 @@ public class OrderBook {
     private double currentPrice;
     private final Queue<Order> lastTenFulfilledOrders;
 
-    private OrderService orderService;
-    private TradeService tradeService;
+    private final OrderService orderService;
+    private final TradeService tradeService;
+    private final CustomedUserDetailsService userService;
 
-    public OrderBook(String symbol, OrderService orderService, TradeService tradeService) {
+    public OrderBook(String symbol, OrderService orderService, TradeService tradeService, CustomedUserDetailsService userService) {
         this.symbol = symbol;
         this.buyOrdersList  = new PriorityQueue<>(Comparator.comparing(Order::getPrice)
                                                             .reversed()
@@ -39,6 +41,7 @@ public class OrderBook {
         this.lastTenFulfilledOrders = new LinkedList<>();
         this.orderService = orderService;
         this.tradeService = tradeService;
+        this.userService = userService;
     }
 
 
@@ -70,7 +73,6 @@ public class OrderBook {
         while (!sellOrdersList.isEmpty() && buyOrder.getCurrentQuantity() > 0) {
             Order sellOrder = sellOrdersList.peek();
             if (buyOrder.getUserId() != sellOrder.getUserId() && buyOrder.getPrice() >= sellOrder.getPrice()) {
-                // Execute trade
                 int tradeQuantity = Math.min(buyOrder.getCurrentQuantity(), sellOrder.getCurrentQuantity());
                 double tradePrice = getTradePrice(buyOrder, sellOrder);
                 Trade trade = new Trade(UUID.randomUUID(),
@@ -86,8 +88,7 @@ public class OrderBook {
                 tradeService.saveTrade(trade);
 
                 // Update capital and ESG points for both users
-                // userService.updateUserCapital();
-
+                userService.settleTrade(buyOrder.getUserId(), sellOrder.getUserId(), symbol, tradePrice, buyOrder.getPrice(), sellOrder.getPrice(), tradeQuantity);
 
                 // Update order statuses and quantities
                 buyOrder.setStatus(OrderStatus.PARTIALLY_FILLED);
@@ -126,6 +127,9 @@ public class OrderBook {
                                         new Timestamp(System.currentTimeMillis()));
                 trades.add(trade);
                 tradeService.saveTrade(trade);
+
+                // Update capital and ESG points for both users
+                userService.settleTrade(buyOrder.getUserId(), sellOrder.getUserId(), symbol, tradePrice, buyOrder.getPrice(), sellOrder.getPrice(), tradeQuantity);
 
                 // Update order statuses and quantities
                 sellOrder.setStatus(OrderStatus.PARTIALLY_FILLED);
@@ -221,9 +225,8 @@ public class OrderBook {
         PriorityQueue<Order> tempBuyOrders = new PriorityQueue<>(buyOrdersList);
         for (int i = 0; i < 5 && !tempBuyOrders.isEmpty(); i++) {
             topBuys.add(tempBuyOrders.poll());
-
         } 
-        // Get lowest 5 sell orders 
+        // Get bottom 5 sell orders
         PriorityQueue<Order> tempSellOrders = new PriorityQueue<>(sellOrdersList);
         for (int i = 0; i < 5 && !tempSellOrders.isEmpty(); i++) {
             lowestSells.add(tempSellOrders.poll());

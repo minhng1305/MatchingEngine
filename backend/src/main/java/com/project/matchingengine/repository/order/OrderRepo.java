@@ -18,4 +18,7 @@ public interface OrderRepo extends JpaRepository<Order, UUID>  {
     List<Trade> findTradesBySymbol(@Param("symbol") String symbol);
 
     List<Order> findByUserIdOrderByOrderTimestampDesc(UUID userId);
+
+    @Query("SELECT o FROM Order o WHERE o.userId = :userId AND o.symbol = :symbol")
+    List<Order> findOrdersByUserIdAndSymbol(UUID userId, String symbol);
 }

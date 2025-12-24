@@ -11,6 +11,7 @@ import com.project.matchingengine.models.order.Trade;
 import java.util.*;
 
 import com.project.matchingengine.service.authentication.CustomedUserDetailsService;
+import com.project.matchingengine.service.authentication.PortfolioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,14 +27,16 @@ public class UserController
     private final OrderRepo orderRepo;
     private final TradeRepo tradeRepo;
     private final CustomedUserDetailsService customedUserDetailsService;
+    private final PortfolioService portfolioService;
 
     @Autowired
-    public UserController(UserRepo userRepo, OrderRepo orderRepo, TradeRepo tradeRepo, CustomedUserDetailsService customedUserDetailsService)
+    public UserController(UserRepo userRepo, OrderRepo orderRepo, TradeRepo tradeRepo, CustomedUserDetailsService customedUserDetailsService, PortfolioService portfolioService)
     {
         this.userRepo = userRepo;
         this.orderRepo = orderRepo;
         this.tradeRepo = tradeRepo;
         this.customedUserDetailsService = customedUserDetailsService;
+        this.portfolioService = portfolioService;
     }
 
     @GetMapping("/info")
@@ -154,15 +157,57 @@ public class UserController
         }
     }
 
-    // TODO: Verify this endpoint for updating user balance
-    @PostMapping("/add-balance") // More descriptive endpoint name
-    public ResponseEntity<?> addBalance(@RequestBody Map<String, Double> request) {
-        try {
-            String userName = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            User user = userRepo.findByUsername(userName)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+//    // TODO: Verify this endpoint for updating user balance
+//    @PostMapping("/add-balance") // More descriptive endpoint name
+//    public ResponseEntity<?> addBalance(@RequestBody Map<String, Double> request) {
+//        try {
+//            String userName = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+//            User user = userRepo.findByUsername(userName)
+//                    .orElseThrow(() -> new RuntimeException("User not found"));
+//
+//            Double amount = request.get("amount");
+//            if (amount == null || amount <= 0) {
+//                return ResponseEntity.badRequest().body(Map.of("error", "Invalid amount specified."));
+//            }
+//
+//            User updatedUser = customedUserDetailsService.addFunds(user.getUserId(), amount);
+//
+//            return ResponseEntity.ok(Map.of(
+//                    "success", true,
+//                    "message", "Balance updated successfully.",
+//                    "newLedgerBalance", updatedUser.getLedgerBalance(),
+//                    "newAvailableBalance", updatedUser.getAvailableBalance()
+//            ));
+//        } catch (Exception e) {
+//            return ResponseEntity.badRequest().body(Map.of("error", "Failed to add balance: " + e.getMessage()));
+//        }
+//    }
 
-            Double amount = request.get("amount");
+    // TODO: Verify this endpoint for updating user balance
+    @PostMapping("/add-balance")
+    public ResponseEntity<Map<String, Object>> addBalance(@RequestBody Map<String, Object> request) {
+        try {
+            // Check if userId is provided in payload (for Admin/Test use)
+            // If not, fall back to currently logged-in user
+            String userIdStr = (String) request.get("userId");
+            User user;
+
+            if (userIdStr != null) {
+                user = customedUserDetailsService.findUserById(UUID.fromString(userIdStr));
+            } else {
+                String userName = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+                user = userRepo.findByUsername(userName).orElseThrow(() -> new RuntimeException("User not found"));
+            }
+
+            // Handle both Integer and Double from JSON
+            Double amount;
+            Object amountObj = request.get("amount");
+            if (amountObj instanceof Integer) {
+                amount = ((Integer) amountObj).doubleValue();
+            } else {
+                amount = (Double) amountObj;
+            }
+
             if (amount == null || amount <= 0) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Invalid amount specified."));
             }
@@ -177,6 +222,42 @@ public class UserController
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", "Failed to add balance: " + e.getMessage()));
+        }
+    }
+
+
+    // TODO: Verify this endpoint for adding stocks to portfolio
+    @PostMapping("/add-stocks")
+    public ResponseEntity<Map<String, Object>> addStocks(@RequestBody Map<String, Object> request) {
+        try {
+            // Check if userId is provided in payload (for Admin/Test use)
+            String userIdStr = (String) request.get("userId");
+            User user;
+
+            if (userIdStr != null) {
+                user = customedUserDetailsService.findUserById(UUID.fromString(userIdStr));
+            } else {
+                String userName = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+                user = userRepo.findByUsername(userName).orElseThrow(() -> new RuntimeException("User not found"));
+            }
+
+            String symbol = (String) request.get("symbol");
+            Integer quantity = (Integer) request.get("quantity");
+
+            if (symbol == null || quantity == null || quantity <= 0) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid symbol or quantity."));
+            }
+
+            portfolioService.addHolding(user.getUserId(), symbol, quantity);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Stocks added successfully.",
+                    "symbol", symbol,
+                    "addedQuantity", quantity
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Failed to add stocks: " + e.getMessage()));
         }
     }
 }

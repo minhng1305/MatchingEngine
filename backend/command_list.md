@@ -19,6 +19,7 @@ gradle clean build --refresh-dependencies
 
 # Run the application with specific profile
 ./gradlew bootRun --args='--spring.profiles.active=server1'
+java -jar build/libs/matchingengine-0.0.1-SNAPSHOT.jar --spring.profiles.active=server1
 
 # List all source files in the src directory, sorted
 find src -type f | sort

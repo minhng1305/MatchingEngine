@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Arrays;
 
+import com.project.matchingengine.service.authentication.CustomedUserDetailsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -12,6 +13,7 @@ import org.springframework.context.annotation.Configuration;
 import com.project.matchingengine.service.orderbook.OrderBook;
 import com.project.matchingengine.service.orderbook.OrderService;
 import com.project.matchingengine.service.orderbook.TradeService;
+import com.project.matchingengine.service.authentication.CustomedUserDetailsService;
 import com.project.matchingengine.models.order.Stock;
 
 
@@ -21,16 +23,18 @@ public class OrderBookConfig {
     private Map<String, OrderBook> orderBooks;
     private final OrderService orderService;
     private final TradeService tradeService;
+    private final CustomedUserDetailsService userService;
     private final String[] symbols = Arrays.stream(Stock.values())
                                             .map(Enum::name)
                                             .toArray(String[]::new);
 
-    public OrderBookConfig(OrderService orderService, TradeService tradeService) {
+    public OrderBookConfig(OrderService orderService, TradeService tradeService, CustomedUserDetailsService userService) {
         this.orderService = orderService;
         this.tradeService = tradeService;
+        this.userService = userService;
         this.orderBooks = new HashMap<>();
         for (String symbol : symbols) {
-            orderBooks.put(symbol, new OrderBook(symbol, orderService, tradeService));
+            orderBooks.put(symbol, new OrderBook(symbol, orderService, tradeService, userService));
         }
     }
 

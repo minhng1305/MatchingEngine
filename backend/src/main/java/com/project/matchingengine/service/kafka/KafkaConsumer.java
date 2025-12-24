@@ -1,6 +1,5 @@
 package com.project.matchingengine.service.kafka;
 
-import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.Logger;
@@ -12,7 +11,6 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.matchingengine.config.OrderBookConfig;
 import com.project.matchingengine.models.order.Order;
-import com.project.matchingengine.models.order.Trade;
 import com.project.matchingengine.service.orderbook.OrderBook;
 import com.project.matchingengine.service.websocket.WebSocketNotificationService;
 
@@ -62,26 +60,6 @@ public class KafkaConsumer {
             notificationService.broadcastOrderBookUpdate(orderBook.getOrderBookSummary());
         } catch (Exception e) {
             logger.error("Failed to process order from Kafka: {}", e.getMessage(), e);
-        }
-    }
-
-    private static void printTrades(ArrayList<Trade> trades) {
-        if (trades.isEmpty()) {
-            System.out.println("No trades executed");
-            return;
-        }
-        for (int i = 0; i < trades.size(); i++) {
-            Trade trade = trades.get(i);
-            logger.info("Trade " + (i + 1) + ": " + trade.getSymbol() +
-                                " || Price: " + trade.getPrice() +
-                                " || Quantity: " + trade.getQuantity() +
-                                " || Buy Order: " + trade.getBuyOrderId() +
-                                " || Sell Order: " + trade.getSellOrderId() +
-                                " || Timestamp: " + trade.getTradeTimestamp());
-
-            logger.info("Trade {}: {} || Price: {} || Quantity: {} || Buy Order: {} || Sell Order: {} || Timestamp: {}",
-                    i + 1, trade.getSymbol(), trade.getPrice(), trade.getSymbol(),
-                    trade.getBuyOrderId(), trade.getSellOrderId(), trade.getTradeTimestamp());
         }
     }
 }

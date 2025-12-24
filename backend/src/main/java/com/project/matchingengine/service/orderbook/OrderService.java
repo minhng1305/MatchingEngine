@@ -44,21 +44,18 @@ public class OrderService {
         if (order.getSide() == OrderSide.BUY) {
             double requiredFunds = order.getPrice() * order.getOriginalQuantity();
             boolean fundsHeld = userService.placeHoldOnFunds(order.getUserId(), requiredFunds);
-
             if (!fundsHeld) {
                 throw new RuntimeException("Insufficient available balance to place buy order.");
             }
         }
 
         // TODO: Enable holdings check for SELL orders
-//        else if (order.getSide() == OrderSide.SELL) {
-//            boolean holdingsHeld = userService.placeHoldOnHoldings(order.getUserId(), order.getSymbol(), order.getOriginalQuantity());
-//
-//            if (!holdingsHeld) {
-//                // Not enough available holdings, reject the order
-//                throw new RuntimeException("Insufficient available holdings to place sell order.");
-//            }
-//        }
+        else if (order.getSide() == OrderSide.SELL) {
+            boolean holdingsHeld = userService.placeHoldOnHoldings(order.getUserId(), order.getSymbol(), order.getOriginalQuantity());
+            if (!holdingsHeld) { // Not enough available holdings, reject the order
+                throw new RuntimeException("Insufficient available holdings to place sell order.");
+            }
+        }
 
         saveOrder(order);
         kafkaProducer.sendOrder(order);
@@ -98,37 +95,37 @@ public class OrderService {
         logger.info("Order: {} - Updated successfully", order.getOrderId());
     }
 
-    /* TODO: Remove order logic
-        1. If order is in PENDING status, remove it from the order book and set its status to CANCELLED.
-        2. If order is in PARTIALLY_FILLED status, remove it from the order book and set its status to CANCELLED.
-        3. If order is in FILLED or CANCELLED status, do nothing.
-     */
-    @Transactional
-    public void cancelOrder(UUID orderId, UUID userId) {
-        Order order = orderRepo.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
-
-        if (!order.getUserId().equals(userId)) {
-            throw new SecurityException("User not authorized to cancel this order.");
-        }
-
-        if (order.getStatus() == OrderStatus.FILLED || order.getStatus() == OrderStatus.CANCELED) {
-            throw new IllegalStateException("Cannot cancel an order that is already filled or cancelled.");
-        }
-
-        // --- BALANCE LOGIC for CANCELLATION ---
-        if (order.getSide() == OrderSide.BUY && order.getCurrentQuantity() > 0) {
-            // Release the hold on funds for the remaining quantity of the buy order.
-            double amountToRelease = order.getPrice() * order.getCurrentQuantity();
-            userService.releaseHoldOnFunds(order.getUserId(), amountToRelease);
-            logger.info("Released hold of {} for cancelled order {}", amountToRelease, orderId);
-        }
-
-        order.setStatus(OrderStatus.CANCELED);
-        updateOrder(order);
-
-        // Note: You also need a mechanism to remove the order from the in-memory OrderBook.
-        // This could be another Kafka message (e.g., to a 'cancellations' topic) or a direct call
-        // if the architecture allows. For now, we've handled the DB and balance part.
-    }
+//    /* TODO: Remove order logic
+//        1. If order is in PENDING status, remove it from the order book and set its status to CANCELLED.
+//        2. If order is in PARTIALLY_FILLED status, remove it from the order book and set its status to CANCELLED.
+//        3. If order is in FILLED or CANCELLED status, do nothing.
+//     */
+//    @Transactional
+//    public void cancelOrder(UUID orderId, UUID userId) {
+//        Order order = orderRepo.findById(orderId)
+//                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+//
+//        if (!order.getUserId().equals(userId)) {
+//            throw new SecurityException("User not authorized to cancel this order.");
+//        }
+//
+//        if (order.getStatus() == OrderStatus.FILLED || order.getStatus() == OrderStatus.CANCELED) {
+//            throw new IllegalStateException("Cannot cancel an order that is already filled or cancelled.");
+//        }
+//
+//        // --- BALANCE LOGIC for CANCELLATION ---
+//        if (order.getSide() == OrderSide.BUY && order.getCurrentQuantity() > 0) {
+//            // Release the hold on funds for the remaining quantity of the buy order.
+//            double amountToRelease = order.getPrice() * order.getCurrentQuantity();
+//            userService.releaseHoldOnFunds(order.getUserId(), amountToRelease);
+//            logger.info("Released hold of {} for cancelled order {}", amountToRelease, orderId);
+//        }
+//
+//        order.setStatus(OrderStatus.CANCELED);
+//        updateOrder(order);
+//
+//        // Note: You also need a mechanism to remove the order from the in-memory OrderBook.
+//        // This could be another Kafka message (e.g., to a 'cancellations' topic) or a direct call
+//        // if the architecture allows. For now, we've handled the DB and balance part.
+//    }
 }
