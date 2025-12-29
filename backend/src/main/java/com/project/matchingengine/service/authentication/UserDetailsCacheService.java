@@ -14,6 +14,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 
+/*
+ * In-memory cache for user balances and portfolios.
+ * This is the only service that accesses the database directly.
+ * Other services should use this service to fetch from the cache instead of directly accessing the database.
+ */
 @Service
 public class UserDetailsCacheService {
     @Autowired

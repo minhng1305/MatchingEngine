@@ -14,7 +14,6 @@ import com.project.matchingengine.models.order.OrderBookSummary;
 import com.project.matchingengine.models.order.OrderSide;
 import com.project.matchingengine.models.order.OrderStatus;
 import com.project.matchingengine.models.order.Trade;
-import com.project.matchingengine.service.authentication.CustomedUserDetailsService;
 import com.project.matchingengine.service.authentication.UserDetailsCacheService;
 
 
@@ -28,13 +27,11 @@ public class OrderBook {
 
     private final OrderService orderService;
     private final TradeService tradeService;
-    private final CustomedUserDetailsService userService;
     private final UserDetailsCacheService userDetailsCacheService;
 
     public OrderBook(String symbol,
                      OrderService orderService,
                      TradeService tradeService,
-                     CustomedUserDetailsService userService,
                      UserDetailsCacheService userDetailsCacheService
                      ) {
         this.symbol = symbol;
@@ -48,7 +45,6 @@ public class OrderBook {
         this.lastTenFulfilledOrders = new LinkedList<>();
         this.orderService = orderService;
         this.tradeService = tradeService;
-        this.userService = userService;
         this.userDetailsCacheService = userDetailsCacheService;
     }
 
