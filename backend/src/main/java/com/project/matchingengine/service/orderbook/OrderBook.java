@@ -15,6 +15,7 @@ import com.project.matchingengine.models.order.OrderSide;
 import com.project.matchingengine.models.order.OrderStatus;
 import com.project.matchingengine.models.order.Trade;
 import com.project.matchingengine.service.authentication.CustomedUserDetailsService;
+import com.project.matchingengine.service.authentication.UserDetailsCacheService;
 
 
 public class OrderBook {
@@ -28,8 +29,14 @@ public class OrderBook {
     private final OrderService orderService;
     private final TradeService tradeService;
     private final CustomedUserDetailsService userService;
+    private final UserDetailsCacheService userDetailsCacheService;
 
-    public OrderBook(String symbol, OrderService orderService, TradeService tradeService, CustomedUserDetailsService userService) {
+    public OrderBook(String symbol,
+                     OrderService orderService,
+                     TradeService tradeService,
+                     CustomedUserDetailsService userService,
+                     UserDetailsCacheService userDetailsCacheService
+                     ) {
         this.symbol = symbol;
         this.buyOrdersList  = new PriorityQueue<>(Comparator.comparing(Order::getPrice)
                                                             .reversed()
@@ -42,6 +49,7 @@ public class OrderBook {
         this.orderService = orderService;
         this.tradeService = tradeService;
         this.userService = userService;
+        this.userDetailsCacheService = userDetailsCacheService;
     }
 
 
@@ -87,8 +95,9 @@ public class OrderBook {
                 trades.add(trade);
                 tradeService.saveTrade(trade);
 
-                // Update capital and ESG points for both users
-                userService.settleTrade(buyOrder.getUserId(), sellOrder.getUserId(), symbol, tradePrice, buyOrder.getPrice(), sellOrder.getPrice(), tradeQuantity);
+                // Update capital and ESG points for both users via caching
+                userDetailsCacheService.applyTrade(buyOrder.getUserId(), symbol, tradeQuantity, tradePrice, buyOrder.getPrice(), true);
+                userDetailsCacheService.applyTrade(sellOrder.getUserId(), symbol, tradeQuantity, tradePrice, sellOrder.getPrice(), false);
 
                 // Update order statuses and quantities
                 buyOrder.setStatus(OrderStatus.PARTIALLY_FILLED);
@@ -114,7 +123,6 @@ public class OrderBook {
         while (!buyOrdersList.isEmpty() && sellOrder.getCurrentQuantity() > 0) {
             Order buyOrder = buyOrdersList.peek();
             if (buyOrder.getUserId() != sellOrder.getUserId() && sellOrder.getPrice() <= buyOrder.getPrice()) {
-                // Execute trade
                 int tradeQuantity = Math.min(sellOrder.getCurrentQuantity(), buyOrder.getCurrentQuantity());
                 double tradePrice = getTradePrice(buyOrder, sellOrder);
                 Trade trade = new Trade(UUID.randomUUID(),
@@ -129,7 +137,8 @@ public class OrderBook {
                 tradeService.saveTrade(trade);
 
                 // Update capital and ESG points for both users
-                userService.settleTrade(buyOrder.getUserId(), sellOrder.getUserId(), symbol, tradePrice, buyOrder.getPrice(), sellOrder.getPrice(), tradeQuantity);
+                userDetailsCacheService.applyTrade(buyOrder.getUserId(), symbol, tradeQuantity, tradePrice, buyOrder.getPrice(), true);
+                userDetailsCacheService.applyTrade(sellOrder.getUserId(), symbol, tradeQuantity, tradePrice, sellOrder.getPrice(), false);
 
                 // Update order statuses and quantities
                 sellOrder.setStatus(OrderStatus.PARTIALLY_FILLED);

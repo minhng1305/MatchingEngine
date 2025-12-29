@@ -13,4 +13,7 @@ public interface PortfolioRepo extends JpaRepository<Portfolio, UUID>
 {
     @Query("SELECT p FROM Portfolio p WHERE p.userId = :userId AND p.symbol = :symbol")
     Optional<Portfolio> findByUserIdAndSymbol(@Param("userId") UUID userId, @Param("symbol") String symbol);
+
+    @Query("SELECT p FROM Portfolio p WHERE p.userId = :userId")
+    Optional<Portfolio> findByUserId(UUID userId);
 }
