@@ -103,21 +103,4 @@ public class OrderController {
             ));
         }
     }
-
-    // TODO: Implement order cancellation
-//    @DeleteMapping("/{orderId}")
-//    public ResponseEntity<?> cancelOrder(@PathVariable String orderId) {
-//        try {
-//            orderService.cancelOrder(UUID.fromString(orderId));
-//            return ResponseEntity.ok(Map.of(
-//                    "success", true,
-//                    "message", "Order cancelled successfully"
-//            ));
-//        } catch (Exception e) {
-//            return ResponseEntity.badRequest().body(Map.of(
-//                    "success", false,
-//                    "message", e.getMessage()
-//            ));
-//        }
-//    }
 }

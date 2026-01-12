@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Order } from '../types';
 import { useAuth } from '../context/AuthContext';
 
@@ -12,20 +12,46 @@ const OrderForm: React.FC<OrderFormProps> = ({ symbol, currentPrice, onSubmitOrd
     const { user } = useAuth();
     const [side, setSide] = useState<'BUY' | 'SELL'>('BUY');
     const [type, setType] = useState<'LIMIT' | 'MARKET'>('LIMIT');
-    const [price, setPrice] = useState(currentPrice.toString());
+    const [price, setPrice] = useState('');
     const [quantity, setQuantity] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
 
-    // 🆕 NEW: Testing mode toggle
-    const [testingMode, setTestingMode] = useState(true);
+    useEffect(() => {
+        if (currentPrice > 0 && type === 'LIMIT') {
+            setPrice(currentPrice.toFixed(2));
+        }
+    }, [currentPrice, type]);
+
+    const validateForm = (): string | null => {
+        if (!quantity || parseFloat(quantity) <= 0) {
+            return 'Quantity must be greater than 0';
+        }
+        if (type === 'LIMIT') {
+            if (!price || parseFloat(price) <= 0) {
+                return 'Price must be greater than 0 for limit orders';
+            }
+        }
+        return null;
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user) return;
+        if (!user) {
+            setError('You must be logged in to submit orders');
+            return;
+        }
+
+        const validationError = validateForm();
+        if (validationError) {
+            setError(validationError);
+            return;
+        }
 
         setLoading(true);
         setError('');
+        setSuccess('');
 
         try {
             const order: Order = {
@@ -33,16 +59,20 @@ const OrderForm: React.FC<OrderFormProps> = ({ symbol, currentPrice, onSubmitOrd
                 symbol,
                 side,
                 type,
-                // ✅ MODIFIED: Allow custom price for market orders in testing mode
-                price: testingMode ? parseFloat(price) : (type === 'MARKET' ? 0 : parseFloat(price)),
+                price: type === 'MARKET' ? 0 : parseFloat(price),
                 quantity: parseInt(quantity),
             };
 
             await onSubmitOrder(order);
-
+            setSuccess(`Order submitted successfully!`);
+            
             // Reset form
             setQuantity('');
-            setPrice(currentPrice.toString());
+            if (type === 'LIMIT') {
+                setPrice(currentPrice.toFixed(2));
+            }
+            
+            setTimeout(() => setSuccess(''), 3000);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to submit order');
         } finally {
@@ -50,353 +80,427 @@ const OrderForm: React.FC<OrderFormProps> = ({ symbol, currentPrice, onSubmitOrd
         }
     };
 
-    const handleTypeChange = (newType: 'LIMIT' | 'MARKET') => {
-        setType(newType);
-        // Auto-fill price suggestions for testing
-        if (newType === 'MARKET' && testingMode) {
-            if (side === 'BUY') {
-                // Suggest a higher price for market buy orders
-                setPrice((currentPrice * 1.05).toFixed(2));
-            } else {
-                // Suggest a lower price for market sell orders
-                setPrice((currentPrice * 0.95).toFixed(2));
-            }
-        } else if (newType === 'LIMIT') {
-            setPrice(currentPrice.toString());
-        }
-    };
-
-    const handleSideChange = (newSide: 'BUY' | 'SELL') => {
+    const handleSideToggle = (newSide: 'BUY' | 'SELL') => {
         setSide(newSide);
-        // Auto-adjust suggested prices when side changes in market mode
-        if (type === 'MARKET' && testingMode) {
-            if (newSide === 'BUY') {
-                setPrice((currentPrice * 1.05).toFixed(2));
-            } else {
-                setPrice((currentPrice * 0.95).toFixed(2));
-            }
-        }
+        setError('');
     };
 
-    const getPriceSuggestions = () => {
-        const current = currentPrice;
-        return [
-            { label: 'Current Price', value: current.toFixed(2) },
-            { label: '+5%', value: (current * 1.05).toFixed(2) },
-            { label: '+10%', value: (current * 1.10).toFixed(2) },
-            { label: '-5%', value: (current * 0.95).toFixed(2) },
-            { label: '-10%', value: (current * 0.90).toFixed(2) },
-        ];
+    const calculateTotal = (): number => {
+        if (!price || !quantity) return 0;
+        return parseFloat(price) * parseInt(quantity);
+    };
+
+    const quickPrice = (multiplier: number) => {
+        const newPrice = (currentPrice * multiplier).toFixed(2);
+        setPrice(newPrice);
     };
 
     return (
         <div style={styles.container}>
             <div style={styles.header}>
-                <h3 style={styles.title}>Submit Order</h3>
-
-                {/* 🆕 NEW: Testing Mode Toggle */}
-                <div style={styles.toggleContainer}>
-                    <label style={styles.toggleLabel}>
-                        <input
-                            type="checkbox"
-                            checked={testingMode}
-                            onChange={(e) => setTestingMode(e.target.checked)}
-                            style={styles.checkbox}
-                        />
-                        <span style={styles.toggleText}>Testing Mode</span>
-                    </label>
-                </div>
+                <h3 style={styles.title}>Place Order</h3>
+                <div style={styles.symbolBadge}>{symbol}</div>
             </div>
 
-            {error && <div style={styles.error}>{error}</div>}
+            {error && (
+                <div style={styles.error}>
+                    <span style={styles.errorIcon}>⚠️</span>
+                    {error}
+                </div>
+            )}
+
+            {success && (
+                <div style={styles.success}>
+                    <span style={styles.successIcon}>✓</span>
+                    {success}
+                </div>
+            )}
 
             <form onSubmit={handleSubmit} style={styles.form}>
-                <div style={styles.row}>
-                    <div style={styles.group}>
-                        <label style={styles.label}>Side</label>
-                        <select
-                            value={side}
-                            onChange={(e) => handleSideChange(e.target.value as 'BUY' | 'SELL')}
-                            style={{...styles.input, color: side === 'BUY' ? '#10b981' : '#ef4444'}}
-                        >
-                            <option value="BUY">BUY</option>
-                            <option value="SELL">SELL</option>
-                        </select>
-                    </div>
-
-                    <div style={styles.group}>
-                        <label style={styles.label}>Type</label>
-                        <select
-                            value={type}
-                            onChange={(e) => handleTypeChange(e.target.value as 'LIMIT' | 'MARKET')}
-                            style={styles.input}
-                        >
-                            <option value="LIMIT">LIMIT</option>
-                            <option value="MARKET">MARKET</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div style={styles.group}>
-                    <label style={styles.label}>
-                        Price
-                        {type === 'MARKET' && !testingMode && ' (Market Order)'}
-                        {type === 'MARKET' && testingMode && ' (Testing: Custom Price)'}
-                    </label>
-
-                    {/* ✅ MODIFIED: Price input always enabled in testing mode */}
-                    <input
-                        type="number"
-                        step="0.01"
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        disabled={type === 'MARKET' && !testingMode}
+                {/* Side Toggle */}
+                <div style={styles.sideToggle}>
+                    <button
+                        type="button"
+                        onClick={() => handleSideToggle('BUY')}
                         style={{
-                            ...styles.input,
-                            backgroundColor: (type === 'MARKET' && !testingMode) ? '#f3f4f6' : 'white',
-                            border: testingMode && type === 'MARKET' ? '2px solid #3b82f6' : '1px solid #d1d5db'
+                            ...styles.toggleButton,
+                            ...(side === 'BUY' ? styles.toggleButtonActiveBuy : {}),
                         }}
-                        placeholder={type === 'MARKET' && testingMode ? 'Enter test price' : 'Enter limit price'}
-                        required
-                    />
-
-                    {/* 🆕 NEW: Price suggestions for testing */}
-                    {testingMode && (
-                        <div style={styles.priceSuggestions}>
-                            <span style={styles.suggestionsLabel}>Quick prices:</span>
-                            {getPriceSuggestions().map((suggestion) => (
-                                <button
-                                    key={suggestion.label}
-                                    type="button"
-                                    onClick={() => setPrice(suggestion.value)}
-                                    style={styles.suggestionBtn}
-                                >
-                                    {suggestion.label}: ${suggestion.value}
-                                </button>
-                            ))}
-                        </div>
-                    )}
+                    >
+                        Buy
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleSideToggle('SELL')}
+                        style={{
+                            ...styles.toggleButton,
+                            ...(side === 'SELL' ? styles.toggleButtonActiveSell : {}),
+                        }}
+                    >
+                        Sell
+                    </button>
                 </div>
 
+                {/* Order Type */}
+                <div style={styles.group}>
+                    <label style={styles.label}>Order Type</label>
+                    <div style={styles.typeToggle}>
+                        <button
+                            type="button"
+                            onClick={() => setType('LIMIT')}
+                            style={{
+                                ...styles.typeButton,
+                                ...(type === 'LIMIT' ? styles.typeButtonActive : {}),
+                            }}
+                        >
+                            Limit
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setType('MARKET')}
+                            style={{
+                                ...styles.typeButton,
+                                ...(type === 'MARKET' ? styles.typeButtonActive : {}),
+                            }}
+                        >
+                            Market
+                        </button>
+                    </div>
+                </div>
+
+                {/* Price Input */}
+                {type === 'LIMIT' && (
+                    <div style={styles.group}>
+                        <label style={styles.label}>
+                            Limit Price
+                            <span style={styles.currentPriceHint}>
+                                (Current: ${currentPrice.toFixed(2)})
+                            </span>
+                        </label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            value={price}
+                            onChange={(e) => setPrice(e.target.value)}
+                            style={styles.input}
+                            placeholder="Enter price"
+                            required
+                        />
+                        <div style={styles.quickPrices}>
+                            <button type="button" onClick={() => quickPrice(0.95)} style={styles.quickBtn}>
+                                -5%
+                            </button>
+                            <button type="button" onClick={() => quickPrice(0.98)} style={styles.quickBtn}>
+                                -2%
+                            </button>
+                            <button type="button" onClick={() => quickPrice(1.0)} style={styles.quickBtn}>
+                                Market
+                            </button>
+                            <button type="button" onClick={() => quickPrice(1.02)} style={styles.quickBtn}>
+                                +2%
+                            </button>
+                            <button type="button" onClick={() => quickPrice(1.05)} style={styles.quickBtn}>
+                                +5%
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {type === 'MARKET' && (
+                    <div style={styles.marketInfo}>
+                        <span style={styles.marketIcon}>⚡</span>
+                        Market orders execute at the best available price
+                    </div>
+                )}
+
+                {/* Quantity Input */}
                 <div style={styles.group}>
                     <label style={styles.label}>Quantity</label>
                     <input
                         type="number"
                         min="1"
+                        step="1"
                         value={quantity}
                         onChange={(e) => setQuantity(e.target.value)}
                         style={styles.input}
                         placeholder="Enter quantity"
                         required
                     />
+                    <div style={styles.quickQuantities}>
+                        <button type="button" onClick={() => setQuantity('10')} style={styles.quickBtn}>
+                            10
+                        </button>
+                        <button type="button" onClick={() => setQuantity('50')} style={styles.quickBtn}>
+                            50
+                        </button>
+                        <button type="button" onClick={() => setQuantity('100')} style={styles.quickBtn}>
+                            100
+                        </button>
+                        <button type="button" onClick={() => setQuantity('500')} style={styles.quickBtn}>
+                            500
+                        </button>
+                    </div>
                 </div>
 
-                {/* 🆕 NEW: Order summary */}
-                {price && quantity && (
-                    <div style={styles.orderSummary}>
-                        <h4 style={styles.summaryTitle}>Order Summary:</h4>
-                        <div style={styles.summaryRow}>
-                            <span>Action:</span>
-                            <span style={{color: side === 'BUY' ? '#10b981' : '#ef4444', fontWeight: 'bold'}}>
-                {side} {quantity} shares of {symbol}
-              </span>
-                        </div>
-                        <div style={styles.summaryRow}>
-                            <span>Price:</span>
-                            <span>${parseFloat(price).toFixed(2)} per share</span>
-                        </div>
+                {/* Order Summary */}
+                {type === 'LIMIT' && price && quantity && (
+                    <div style={styles.summary}>
                         <div style={styles.summaryRow}>
                             <span>Total Value:</span>
-                            <span style={{fontWeight: 'bold'}}>
-                ${(parseFloat(price) * parseInt(quantity || '0')).toFixed(2)}
-              </span>
-                        </div>
-                        <div style={styles.summaryRow}>
-                            <span>Order Type:</span>
-                            <span>
-                {type}
-                                {type === 'MARKET' && testingMode && ' (Testing Mode)'}
-              </span>
+                            <span style={styles.summaryValue}>
+                                ${calculateTotal().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
                         </div>
                     </div>
                 )}
 
+                {/* Submit Button */}
                 <button
                     type="submit"
-                    disabled={loading || !quantity}
+                    disabled={loading || !quantity || (type === 'LIMIT' && !price)}
                     style={{
-                        ...styles.submitBtn,
-                        backgroundColor: side === 'BUY' ? '#10b981' : '#ef4444',
-                        opacity: loading || !quantity ? 0.5 : 1
+                        ...styles.submitButton,
+                        ...(side === 'BUY' ? styles.submitButtonBuy : styles.submitButtonSell),
+                        ...(loading || !quantity || (type === 'LIMIT' && !price) ? styles.submitButtonDisabled : {}),
                     }}
                 >
-                    {loading ? 'Submitting...' : `${side} ${symbol}`}
+                    {loading ? (
+                        <>
+                            <span style={styles.spinner}></span>
+                            Submitting...
+                        </>
+                    ) : (
+                        `${side} ${quantity || '0'} ${symbol} ${type === 'MARKET' ? '(Market)' : `@ $${price || '0.00'}`}`
+                    )}
                 </button>
             </form>
-
-            {/* 🆕 NEW: Testing mode info */}
-            {testingMode && (
-                <div style={styles.testingInfo}>
-                    <h4 style={styles.infoTitle}>🧪 Testing Mode Active</h4>
-                    <ul style={styles.infoList}>
-                        <li>✅ Market orders can specify custom prices</li>
-                        <li>✅ Test different price ranges for order matching</li>
-                        <li>✅ Quick price suggestions available</li>
-                        <li>✅ Perfect for testing your matching engine</li>
-                    </ul>
-                </div>
-            )}
         </div>
     );
 };
 
-const styles = {
+const styles: { [key: string]: React.CSSProperties } = {
     container: {
-        backgroundColor: 'white',
-        border: '1px solid #e5e7eb',
-        borderRadius: '0.5rem',
+        backgroundColor: '#1e293b',
+        border: '1px solid #334155',
+        borderRadius: '0.75rem',
         padding: '1.5rem',
-        marginBottom: '1.5rem',
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
     },
     header: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '1rem',
+        marginBottom: '1.5rem',
+        paddingBottom: '1rem',
+        borderBottom: '2px solid #334155',
     },
     title: {
-        fontSize: '1.125rem',
-        fontWeight: 'bold',
-        color: '#1f2937',
+        fontSize: '1.25rem',
+        fontWeight: '700',
+        color: '#e2e8f0',
+        margin: 0,
     },
-    toggleContainer: {
-        display: 'flex',
-        alignItems: 'center',
-    },
-    toggleLabel: {
-        display: 'flex',
-        alignItems: 'center',
-        cursor: 'pointer',
+    symbolBadge: {
+        backgroundColor: '#0f172a',
+        color: '#cbd5e1',
+        padding: '0.25rem 0.75rem',
+        borderRadius: '0.5rem',
         fontSize: '0.875rem',
-    },
-    checkbox: {
-        marginRight: '0.5rem',
-    },
-    toggleText: {
-        color: '#3b82f6',
-        fontWeight: '500',
+        fontWeight: '600',
     },
     error: {
-        backgroundColor: '#fef2f2',
-        border: '1px solid #fecaca',
-        color: '#dc2626',
+        backgroundColor: '#7f1d1d',
+        border: '1px solid #991b1b',
+        color: '#fca5a5',
         padding: '0.75rem',
-        borderRadius: '0.25rem',
+        borderRadius: '0.5rem',
         marginBottom: '1rem',
         fontSize: '0.875rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+    },
+    errorIcon: {
+        fontSize: '1rem',
+    },
+    success: {
+        backgroundColor: '#14532d',
+        border: '1px solid #166534',
+        color: '#86efac',
+        padding: '0.75rem',
+        borderRadius: '0.5rem',
+        marginBottom: '1rem',
+        fontSize: '0.875rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+    },
+    successIcon: {
+        fontSize: '1rem',
     },
     form: {
         display: 'flex',
-        flexDirection: 'column' as const,
-        gap: '1rem',
+        flexDirection: 'column',
+        gap: '1.25rem',
     },
-    row: {
+    sideToggle: {
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
-        gap: '1rem',
+        gap: '0.5rem',
+        marginBottom: '0.5rem',
+    },
+    toggleButton: {
+        padding: '0.75rem',
+        border: '2px solid #475569',
+        borderRadius: '0.5rem',
+        fontSize: '1rem',
+        fontWeight: '600',
+        cursor: 'pointer',
+        backgroundColor: '#0f172a',
+        color: '#94a3b8',
+        transition: 'all 0.2s',
+    },
+    toggleButtonActiveBuy: {
+        backgroundColor: '#10b981',
+        color: '#ffffff',
+        borderColor: '#10b981',
+    },
+    toggleButtonActiveSell: {
+        backgroundColor: '#ef4444',
+        color: '#ffffff',
+        borderColor: '#ef4444',
     },
     group: {
         display: 'flex',
-        flexDirection: 'column' as const,
+        flexDirection: 'column',
+        gap: '0.5rem',
     },
     label: {
         fontSize: '0.875rem',
+        fontWeight: '600',
+        color: '#e2e8f0',
+    },
+    currentPriceHint: {
+        fontSize: '0.75rem',
+        fontWeight: '400',
+        color: '#94a3b8',
+        marginLeft: '0.5rem',
+    },
+    typeToggle: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '0.5rem',
+    },
+    typeButton: {
+        padding: '0.5rem',
+        border: '1px solid #475569',
+        borderRadius: '0.375rem',
+        fontSize: '0.875rem',
         fontWeight: '500',
-        color: '#374151',
-        marginBottom: '0.25rem',
+        cursor: 'pointer',
+        backgroundColor: '#0f172a',
+        color: '#cbd5e1',
+        transition: 'all 0.2s',
+    },
+    typeButtonActive: {
+        backgroundColor: '#3b82f6',
+        color: '#ffffff',
+        borderColor: '#3b82f6',
     },
     input: {
-        padding: '0.5rem',
-        border: '1px solid #d1d5db',
-        borderRadius: '0.25rem',
-        fontSize: '0.875rem',
+        padding: '0.75rem',
+        border: '1px solid #475569',
+        borderRadius: '0.5rem',
+        fontSize: '1rem',
         outline: 'none',
         transition: 'border-color 0.2s',
+        backgroundColor: '#0f172a',
+        color: '#e2e8f0',
     },
-    priceSuggestions: {
+    quickPrices: {
         display: 'flex',
-        flexWrap: 'wrap' as const,
         gap: '0.5rem',
-        marginTop: '0.5rem',
-        padding: '0.75rem',
-        backgroundColor: '#f8fafc',
-        borderRadius: '0.25rem',
-        border: '1px solid #e2e8f0',
+        flexWrap: 'wrap',
     },
-    suggestionsLabel: {
-        fontSize: '0.75rem',
-        color: '#64748b',
-        fontWeight: '500',
-        width: '100%',
-        marginBottom: '0.25rem',
+    quickQuantities: {
+        display: 'flex',
+        gap: '0.5rem',
+        flexWrap: 'wrap',
     },
-    suggestionBtn: {
-        backgroundColor: '#e2e8f0',
-        border: '1px solid #cbd5e1',
-        borderRadius: '0.25rem',
-        padding: '0.25rem 0.5rem',
+    quickBtn: {
+        padding: '0.25rem 0.75rem',
+        border: '1px solid #475569',
+        borderRadius: '0.375rem',
         fontSize: '0.75rem',
+        backgroundColor: '#0f172a',
+        color: '#cbd5e1',
         cursor: 'pointer',
-        transition: 'background-color 0.2s',
-        color: '#475569',
+        transition: 'all 0.2s',
     },
-    orderSummary: {
-        backgroundColor: '#f8fafc',
-        border: '1px solid #e2e8f0',
-        borderRadius: '0.25rem',
-        padding: '1rem',
-    },
-    summaryTitle: {
+    marketInfo: {
+        backgroundColor: '#1e3a8a',
+        border: '1px solid #3b82f6',
+        color: '#93c5fd',
+        padding: '0.75rem',
+        borderRadius: '0.5rem',
         fontSize: '0.875rem',
-        fontWeight: '600',
-        color: '#374151',
-        marginBottom: '0.5rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+    },
+    marketIcon: {
+        fontSize: '1.25rem',
+    },
+    summary: {
+        backgroundColor: '#0f172a',
+        border: '1px solid #334155',
+        borderRadius: '0.5rem',
+        padding: '1rem',
     },
     summaryRow: {
         display: 'flex',
         justifyContent: 'space-between',
         fontSize: '0.875rem',
-        marginBottom: '0.25rem',
-        color: '#4b5563',
+        color: '#cbd5e1',
     },
-    submitBtn: {
-        color: 'white',
-        border: 'none',
-        padding: '0.75rem 1.5rem',
-        borderRadius: '0.25rem',
-        fontSize: '0.875rem',
-        fontWeight: '500',
-        cursor: 'pointer',
-        transition: 'opacity 0.2s',
+    summaryValue: {
+        fontWeight: '700',
+        color: '#e2e8f0',
+        fontSize: '1rem',
     },
-    testingInfo: {
-        backgroundColor: '#fef3c7',
-        border: '1px solid #f59e0b',
-        borderRadius: '0.25rem',
+    submitButton: {
         padding: '1rem',
-        marginTop: '1rem',
+        borderRadius: '0.5rem',
+        fontSize: '1rem',
+        fontWeight: '700',
+        cursor: 'pointer',
+        border: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '0.5rem',
+        transition: 'all 0.2s',
     },
-    infoTitle: {
-        fontSize: '0.875rem',
-        fontWeight: '600',
-        color: '#92400e',
-        marginBottom: '0.5rem',
+    submitButtonBuy: {
+        backgroundColor: '#10b981',
+        color: '#ffffff',
     },
-    infoList: {
-        fontSize: '0.75rem',
-        color: '#b45309',
-        margin: 0,
-        paddingLeft: '1rem',
+    submitButtonSell: {
+        backgroundColor: '#ef4444',
+        color: '#ffffff',
+    },
+    submitButtonDisabled: {
+        opacity: 0.5,
+        cursor: 'not-allowed',
+    },
+    spinner: {
+        width: '1rem',
+        height: '1rem',
+        border: '2px solid rgba(255, 255, 255, 0.3)',
+        borderTop: '2px solid #ffffff',
+        borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite',
     },
 };
 

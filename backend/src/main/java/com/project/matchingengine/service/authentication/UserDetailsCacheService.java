@@ -1,17 +1,29 @@
 package com.project.matchingengine.service.authentication;
 
-import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
-
-import com.project.matchingengine.repository.authentication.UserRepo;
-import com.project.matchingengine.repository.authentication.PortfolioRepo;
-import com.project.matchingengine.models.authentication.User;
-import com.project.matchingengine.models.authentication.Portfolio;
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.project.matchingengine.models.authentication.Portfolio;
+import com.project.matchingengine.models.authentication.User;
+import com.project.matchingengine.repository.authentication.PortfolioRepo;
+import com.project.matchingengine.repository.authentication.UserRepo;
 
 
 /*
@@ -21,6 +33,8 @@ import java.util.stream.Collectors;
  */
 @Service
 public class UserDetailsCacheService {
+    private static final Logger logger = LoggerFactory.getLogger(UserDetailsCacheService.class);
+
     @Autowired
     private UserRepo userRepo;
 
@@ -28,6 +42,7 @@ public class UserDetailsCacheService {
     private PortfolioRepo portfolioRepo;
 
     private final ConcurrentHashMap<UUID, CachedUserDetails> cache = new ConcurrentHashMap<>();
+    private final Set<UUID> dirtyUsers = Collections.synchronizedSet(new HashSet<>());
     private static final int MAX_CACHE_SIZE = 10_000;  // Prevent memory explosion
     private static final long EVICTION_TIME_MS = 1800_000;  // 30-min inactivity
 
@@ -37,6 +52,7 @@ public class UserDetailsCacheService {
         public double availableBalance;
         public Map<String, Integer> holdings;
         public long lastAccessTime;
+        public boolean isDirty;
 
         public CachedUserDetails(UUID userId, double ledger, double available,
                                  Map<String, Integer> holdings) {
@@ -45,6 +61,7 @@ public class UserDetailsCacheService {
             this.availableBalance = available;
             this.holdings = new ConcurrentHashMap<>(holdings);
             this.lastAccessTime = System.currentTimeMillis();
+            this.isDirty = false;
         }
 
         public synchronized void applyTrade(String symbol, int quantityDelta, double tradePrice, double initialPrice, boolean isBuy) {
@@ -57,6 +74,7 @@ public class UserDetailsCacheService {
                 this.availableBalance += quantityDelta * tradePrice;
             }
             this.lastAccessTime = System.currentTimeMillis();
+            this.isDirty = true;
         }
 
         public synchronized boolean hasAvailableFunds(double amount) {
@@ -80,7 +98,7 @@ public class UserDetailsCacheService {
             cached.lastAccessTime = System.currentTimeMillis();
             return cached;
         }
-        // Cache miss - load from database (slow path, happens once)
+        // Cache miss - load from DB (slow path, happens once)
         return loadUserIntoCache(userId);
     }
 
@@ -123,6 +141,7 @@ public class UserDetailsCacheService {
     public void applyTrade(UUID userId, String symbol, int quantityDelta, double tradePrice, double initialPrice, boolean isBuy) {
         CachedUserDetails balance = getBalance(userId);  // Ensure in cache
         balance.applyTrade(symbol, quantityDelta, tradePrice, initialPrice, isBuy);
+        dirtyUsers.add(userId);
     }
 
     /**
@@ -141,6 +160,7 @@ public class UserDetailsCacheService {
             }
             balance.holdings.put(symbol, balance.holdings.get(symbol) - quantity);
         }
+        dirtyUsers.add(userId);
     }
 
     /**
@@ -153,13 +173,14 @@ public class UserDetailsCacheService {
     /**
      * Evict inactive users from cache (memory management)
      */
+    // TODO: When entry is removed, should update the entry data onto DB first before removing it from cache
     private void evictOldestEntry() {
-        long now = System.currentTimeMillis();
         // Find and remove oldest entry
         cache.entrySet().stream()
                 .min(Comparator.comparingLong(e -> e.getValue().lastAccessTime))
                 .ifPresent(entry -> {
                     cache.remove(entry.getKey());
+
                     System.out.println("Evicted user " + entry.getKey() + " from cache");
                 });
     }
@@ -167,7 +188,8 @@ public class UserDetailsCacheService {
     /**
      * Background task to clean up stale cache entries
      */
-    @Scheduled(fixedRate = 300000)  // Every 5 minutes
+    // TODO: When entry is removed, should update the entry data onto DB first before removing it from cache
+    @Scheduled(fixedRate = 300000)  // Every 5 mins
     public void evictStaleEntries() {
         long now = System.currentTimeMillis();
         int evicted = 0;
@@ -181,6 +203,106 @@ public class UserDetailsCacheService {
         if (evicted > 0) {
             System.out.println("Cache cleanup: evicted " + evicted +
                     " inactive users (remaining: " + cache.size() + ")");
+        }
+    }
+
+    public Set<UUID> getDirtyUsers() {
+        return new HashSet<>(dirtyUsers);
+    }
+
+    private void clearDirtyUsers() {
+        dirtyUsers.clear();
+    }
+
+    /*
+     * Background task to update changes to all schemas inside DB
+     */
+    // TODO: Update all schemas inside DB
+    @Scheduled(fixedRate = 5000)
+    @Transactional
+    public void updateDatabase() {
+        try {
+            if (dirtyUsers.isEmpty()) {
+                logger.debug("No dirty users, skipping DB update");
+                return;
+            }
+
+            logger.info("Starting batch update for {} dirty users...", dirtyUsers.size());
+
+            // Step 1: Update Users table
+            List<User> usersToUpdate = new ArrayList<>();
+            for (UUID userId : dirtyUsers) {
+                CachedUserDetails cached = cache.get(userId);
+                if (cached != null) {
+                    User user = userRepo.findById(userId).orElse(null);
+                    if (user != null) {
+                        user.setLedgerBalance(cached.ledgerBalance);
+                        user.setAvailableBalance(cached.availableBalance);
+                        usersToUpdate.add(user);
+                    }
+                }
+            }
+            userRepo.saveAll(usersToUpdate);
+            logger.info("Updated {} user records", usersToUpdate.size());
+
+            // Step 2: Update Portfolio table
+            List<Portfolio> portfoliosToUpdate = new ArrayList<>();
+            List<Portfolio> portfoliosToDelete = new ArrayList<>();
+            
+            for (UUID userId : dirtyUsers) {
+                CachedUserDetails cached = cache.get(userId);
+                if (cached != null) {
+                    for (Map.Entry<String, Integer> holding : cached.holdings.entrySet()) {
+                        String symbol = holding.getKey();
+                        int newQuantity = holding.getValue();
+                        
+                        // Check if portfolio exists in database using the composite key
+                        Optional<Portfolio> existingPortfolioOpt = portfolioRepo.findByUserIdAndSymbol(userId, symbol);
+                        
+                        if (existingPortfolioOpt.isPresent()) {
+                            // Portfolio exists - update it
+                            Portfolio portfolio = existingPortfolioOpt.get();
+                            int oldQuantity = portfolio.getQuantity();
+                            
+                            if (oldQuantity != newQuantity) {
+                                if (newQuantity > 0) {
+                                    portfolio.setQuantity(newQuantity);
+                                    portfoliosToUpdate.add(portfolio);
+                                } else {
+                                    // Delete portfolios with zero quantity
+                                    portfoliosToDelete.add(portfolio);
+                                }
+                            }
+                        } else {
+                            // Portfolio doesn't exist - create new one only if quantity > 0
+                            if (newQuantity > 0) {
+                                Portfolio newPortfolio = new Portfolio(userId, symbol, newQuantity);
+                                portfoliosToUpdate.add(newPortfolio);
+                            }
+                            // If quantity is 0 and it doesn't exist, do nothing
+                        }
+                    }
+                }
+            }
+            
+            // Save/Insert new and updated portfolios
+            if (!portfoliosToUpdate.isEmpty()) {
+                portfolioRepo.saveAll(portfoliosToUpdate);
+                logger.info("Updated/Inserted {} portfolio records", portfoliosToUpdate.size());
+            }
+            
+            // Delete zero-quantity portfolios
+            if (!portfoliosToDelete.isEmpty()) {
+                portfolioRepo.deleteAll(portfoliosToDelete);
+                logger.info("Deleted {} zero-quantity portfolio records", portfoliosToDelete.size());
+            }
+
+            // Step 3: Clear dirty tracking
+            clearDirtyUsers();
+            logger.info("✅ Batch update complete!");
+        } catch (Exception e) {
+            logger.error("❌ CRITICAL ERROR in updateDatabase(): {}", e.getMessage(), e);
+            // TODO: Add dead letter queue / retry mechanism
         }
     }
 

@@ -5,16 +5,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.project.matchingengine.models.order.Order;
 import com.project.matchingengine.service.kafka.KafkaProducer;
 import com.project.matchingengine.repository.order.OrderRepo;
 import com.project.matchingengine.repository.authentication.UserRepo;
-import com.project.matchingengine.service.authentication.CustomedUserDetailsService;
 import com.project.matchingengine.service.authentication.UserDetailsCacheService;
 import com.project.matchingengine.models.order.OrderSide;
-import com.project.matchingengine.models.order.OrderStatus;
 
 import java.util.List;
 import java.util.Optional;

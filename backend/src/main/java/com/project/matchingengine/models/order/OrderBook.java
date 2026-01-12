@@ -1,4 +1,4 @@
-package com.project.matchingengine.service.orderbook;
+package com.project.matchingengine.models.order;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -9,31 +9,22 @@ import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.UUID;
 
-import com.project.matchingengine.models.order.Order;
-import com.project.matchingengine.models.order.OrderBookSummary;
-import com.project.matchingengine.models.order.OrderSide;
-import com.project.matchingengine.models.order.OrderStatus;
-import com.project.matchingengine.models.order.Trade;
 import com.project.matchingengine.service.authentication.UserDetailsCacheService;
 
 
 public class OrderBook {
-    private String symbol;
+    private final String symbol;
     private final PriorityQueue<Order> buyOrdersList;
     private final PriorityQueue<Order> sellOrdersList;
     private final ArrayList<Trade> trades;
     private double currentPrice;
     private final Queue<Order> lastTenFulfilledOrders;
-
-    private final OrderService orderService;
-    private final TradeService tradeService;
     private final UserDetailsCacheService userDetailsCacheService;
+    private final OrderBookSummary orderBookSummary;
 
     public OrderBook(String symbol,
-                     OrderService orderService,
-                     TradeService tradeService,
-                     UserDetailsCacheService userDetailsCacheService
-                     ) {
+                     UserDetailsCacheService userDetailsCacheService)
+    {
         this.symbol = symbol;
         this.buyOrdersList  = new PriorityQueue<>(Comparator.comparing(Order::getPrice)
                                                             .reversed()
@@ -43,11 +34,14 @@ public class OrderBook {
         this.trades = new ArrayList<>();
         this.currentPrice = 0.0;
         this.lastTenFulfilledOrders = new LinkedList<>();
-        this.orderService = orderService;
-        this.tradeService = tradeService;
         this.userDetailsCacheService = userDetailsCacheService;
+        this.orderBookSummary = new OrderBookSummary(symbol, new ArrayList<>(), new ArrayList<>(), currentPrice, 0.0, 0, 0.0, 0, new ArrayList<>());
+
     }
 
+    public String getSymbol() {
+        return symbol;
+    }
 
     public void addOrder(Order order) {
         if (order.getSide() == OrderSide.BUY) {
@@ -57,7 +51,6 @@ public class OrderBook {
             } else {
                 processFullyFilledOrders(order);
             }
-            orderService.updateOrder(order);
         } else {
             matchSellOrder(order);
             if (order.getCurrentQuantity() > 0) {
@@ -65,13 +58,11 @@ public class OrderBook {
             } else {
                 processFullyFilledOrders(order);
             }
-            orderService.updateOrder(order);
         }
         if (!trades.isEmpty()) {
             this.currentPrice = trades.get(trades.size() - 1).getPrice();
         }
     }
-
 
     public void matchBuyOrder(Order buyOrder) {
         while (!sellOrdersList.isEmpty() && buyOrder.getCurrentQuantity() > 0) {
@@ -89,7 +80,6 @@ public class OrderBook {
                                         sellOrder.getUserId(),
                                         new Timestamp(System.currentTimeMillis()));
                 trades.add(trade);
-                tradeService.saveTrade(trade);
 
                 // Update capital and ESG points for both users via caching
                 userDetailsCacheService.applyTrade(buyOrder.getUserId(), symbol, tradeQuantity, tradePrice, buyOrder.getPrice(), true);
@@ -107,8 +97,6 @@ public class OrderBook {
                     processFullyFilledOrders(sellOrder);
                     sellOrdersList.poll();
                 }
-                orderService.updateOrder(sellOrder);
-                orderService.updateOrder(buyOrder);
             } else {
                 break;
             }
@@ -130,7 +118,6 @@ public class OrderBook {
                                         sellOrder.getUserId(),
                                         new Timestamp(System.currentTimeMillis()));
                 trades.add(trade);
-                tradeService.saveTrade(trade);
 
                 // Update capital and ESG points for both users
                 userDetailsCacheService.applyTrade(buyOrder.getUserId(), symbol, tradeQuantity, tradePrice, buyOrder.getPrice(), true);
@@ -148,8 +135,6 @@ public class OrderBook {
                     processFullyFilledOrders(buyOrder); 
                     buyOrdersList.poll();
                 }
-                orderService.updateOrder(sellOrder);
-                orderService.updateOrder(buyOrder);
             } else {
                 break;
             }
@@ -180,7 +165,6 @@ public class OrderBook {
         return tradePrice;
     }
 
-
     public void processFullyFilledOrders(Order order) {
         System.out.println(symbol + " - Order fully fulfilled and removed from " + order.getSide() + " side of order book: " + order.getOrderId());
         order.setStatus(OrderStatus.FILLED);
@@ -190,7 +174,6 @@ public class OrderBook {
             lastTenFulfilledOrders.poll();
         }
     }
-
 
     public ArrayList<Trade> getTrades() {
         return trades;
@@ -211,18 +194,11 @@ public class OrderBook {
         return currentPrice;
     }
 
-
-    public PriorityQueue<Order> getBuyOrdersList() {
-        return buyOrdersList;
-    }
-
-
-    public PriorityQueue<Order> getSellOrdersList() {
-        return sellOrdersList;
-    }
-
-
     public OrderBookSummary getOrderBookSummary() {
+        return this.orderBookSummary;
+    }
+
+    public void updateOrderBookSummary() {
         List<Order> topBuys = new ArrayList<>();
         List<Order> lowestSells = new ArrayList<>();
 
@@ -236,16 +212,60 @@ public class OrderBook {
         for (int i = 0; i < 5 && !tempSellOrders.isEmpty(); i++) {
             lowestSells.add(tempSellOrders.poll());
         }
-        return new OrderBookSummary(
-            this.symbol,
-            topBuys,
-            lowestSells,
-            getCurrentPrice(),
-            buyOrdersList.isEmpty() ? 0.0 : buyOrdersList.peek().getPrice(),
-            buyOrdersList.isEmpty() ? 0 : buyOrdersList.peek().getOriginalQuantity(),
-            sellOrdersList.isEmpty() ? 0.0 : sellOrdersList.peek().getPrice(),
-            sellOrdersList.isEmpty() ? 0 : sellOrdersList.peek().getOriginalQuantity(),
-            getMostRecent10Trades()
-        );
+        
+        // Safely get best bid (buy) price and quantity, defaulting to 0 if queue is empty
+        double bestBidPrice = 0.0;
+        int bestBidQuantity = 0;
+        if (!buyOrdersList.isEmpty()) {
+            Order bestBid = buyOrdersList.peek();
+            if (bestBid != null) {
+                bestBidPrice = bestBid.getPrice();
+                bestBidQuantity = bestBid.getCurrentQuantity();
+            }
+        }
+        
+        // Safely get best ask (sell) price and quantity, defaulting to 0 if queue is empty
+        double bestAskPrice = 0.0;
+        int bestAskQuantity = 0;
+        if (!sellOrdersList.isEmpty()) {
+            Order bestAsk = sellOrdersList.peek();
+            if (bestAsk != null) {
+                bestAskPrice = bestAsk.getPrice();
+                bestAskQuantity = bestAsk.getCurrentQuantity();
+            }
+        }
+        
+        orderBookSummary.updateOrderBookSummary(
+                topBuys,
+                lowestSells,
+                currentPrice,
+                bestBidPrice,
+                bestBidQuantity,
+                bestAskPrice,
+                bestAskQuantity,
+                getMostRecent10Trades());
+    }
+
+    public void clearTradeRecords() {
+        this.trades.clear();
+    }
+
+    /**
+     * Get all orders that need to be persisted to the database.
+     * This includes active orders (in queues) and fully filled orders.
+     */
+    public List<Order> getAllOrdersToUpdate() {
+        List<Order> ordersToUpdate = new ArrayList<>();
+        
+        // Add all active buy orders
+        ordersToUpdate.addAll(buyOrdersList);
+        
+        // Add all active sell orders
+        ordersToUpdate.addAll(sellOrdersList);
+        
+        // Add all fully filled orders
+        ordersToUpdate.addAll(lastTenFulfilledOrders);
+        
+        return ordersToUpdate;
     }
 }

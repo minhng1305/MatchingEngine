@@ -1,10 +1,20 @@
-CREATE TABLE public.users (
+REATE TABLE public.users (
     user_id UUID PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
     username VARCHAR(255) NOT NULL,
-    password VARCHAR(255) NOT NULL
+    password VARCHAR(255) NOT NULL,
+	ledger_balance DOUBLE PRECISION,
+	available_balance DOUBLE PRECISION,
+	current_esg_points INTEGER NOT NULL
 );
-
+---------------------------------------------------------------------------------------
+CREATE TABLE public.portfolios (
+    user_id UUID NOT NULL,
+    symbol VARCHAR(255) NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, symbol),
+    CONSTRAINT fk_portfolio_user FOREIGN KEY(user_id) REFERENCES public.users(user_id)
+);
 ---------------------------------------------------------------------------------------
 CREATE TYPE order_side_enum AS ENUM ('BUY', 'SELL');
 CREATE TYPE order_type_enum AS ENUM ('MARKET', 'LIMIT');
@@ -24,9 +34,7 @@ CREATE TABLE public.orders (
     status order_status_enum,
     CONSTRAINT fk_user FOREIGN KEY(user_id) REFERENCES public.users(user_id) -- The constraint is updated
 );
-
 -------------------------------------------------------------------------------------
-
 CREATE TABLE public.trades (
     trade_id UUID PRIMARY KEY,
     symbol VARCHAR(255) NOT NULL,
@@ -42,5 +50,3 @@ CREATE TABLE public.trades (
 CREATE INDEX idx_orders_user_id ON public.orders(user_id);
 CREATE INDEX idx_orders_symbol_status ON public.orders(symbol, status);
 CREATE INDEX idx_trades_symbol ON public.trades(symbol);
-
---------------------------------------------------------------------------------------

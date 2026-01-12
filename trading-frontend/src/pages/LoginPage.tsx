@@ -65,18 +65,26 @@ const LoginPage: React.FC = () => {
     return (
         <div style={styles.container}>
             <div style={styles.loginBox}>
-                <h1 style={styles.title}>
-                    {isLogin ? 'TradePro Login' : 'TradePro Register'}
-                </h1>
+                <div style={styles.logoSection}>
+                    <span style={styles.logoIcon}>📈</span>
+                    <h1 style={styles.title}>
+                        GreenTrader
+                    </h1>
+                    <p style={styles.subtitle}>
+                        {isLogin ? 'Welcome back' : 'Create your account'}
+                    </p>
+                </div>
 
                 {error && (
                     <div style={styles.error}>
+                        <span style={styles.errorIcon}>⚠️</span>
                         {error}
                     </div>
                 )}
 
                 {success && (
                     <div style={styles.success}>
+                        <span style={styles.successIcon}>✓</span>
                         {success}
                     </div>
                 )}
@@ -147,7 +155,7 @@ const LoginPage: React.FC = () => {
                         style={{
                             ...styles.submitButton,
                             opacity: loading ? 0.7 : 1,
-                            backgroundColor: isLogin ? '#3b82f6' : '#16a34a'
+                            backgroundColor: isLogin ? '#10b981' : '#3b82f6'
                         }}
                     >
                         {loading ? (isLogin ? 'Logging in...' : 'Creating account...') : (isLogin ? 'Login' : 'Create Account')}
@@ -171,9 +179,9 @@ const LoginPage: React.FC = () => {
                 {isLogin && (
                     <div style={styles.footer}>
                         <div style={styles.demoCredentials}>
-                            <h4>Demo Credentials:</h4>
-                            <p>Username: admin</p>
-                            <p>Password: password</p>
+                            <h4 style={styles.demoTitle}>Demo Credentials:</h4>
+                            <p style={styles.demoText}>Username: admin</p>
+                            <p style={styles.demoText}>Password: password</p>
                         </div>
                     </div>
                 )}
@@ -182,97 +190,128 @@ const LoginPage: React.FC = () => {
     );
 };
 
-const styles = {
+const styles: { [key: string]: React.CSSProperties } = {
     container: {
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#f3f4f6',
+        backgroundColor: '#0f172a',
         padding: '1rem',
     },
     loginBox: {
-        backgroundColor: 'white',
-        padding: '2rem',
-        borderRadius: '0.5rem',
-        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+        backgroundColor: '#1e293b',
+        padding: '2.5rem',
+        borderRadius: '0.75rem',
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
         width: '100%',
-        maxWidth: '400px',
+        maxWidth: '450px',
+        border: '1px solid #334155',
+    },
+    logoSection: {
+        textAlign: 'center',
+        marginBottom: '2rem',
+    },
+    logoIcon: {
+        fontSize: '3rem',
+        display: 'block',
+        marginBottom: '0.5rem',
     },
     title: {
-        fontSize: '2rem',
-        fontWeight: 'bold',
-        textAlign: 'center' as const,
-        marginBottom: '2rem',
-        color: '#1f2937',
+        fontSize: '2.5rem',
+        fontWeight: '700',
+        margin: '0 0 0.5rem 0',
+        background: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
+    },
+    subtitle: {
+        fontSize: '1rem',
+        color: '#94a3b8',
+        margin: 0,
     },
     error: {
-        backgroundColor: '#fef2f2',
-        border: '1px solid #fecaca',
-        color: '#dc2626',
+        backgroundColor: '#7f1d1d',
+        border: '1px solid #991b1b',
+        color: '#fca5a5',
         padding: '0.75rem',
-        borderRadius: '0.25rem',
+        borderRadius: '0.5rem',
         marginBottom: '1rem',
         fontSize: '0.875rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+    },
+    errorIcon: {
+        fontSize: '1.25rem',
     },
     success: {
-        backgroundColor: '#f0fdf4',
-        border: '1px solid #bbf7d0',
-        color: '#16a34a',
+        backgroundColor: '#14532d',
+        border: '1px solid #166534',
+        color: '#86efac',
         padding: '0.75rem',
-        borderRadius: '0.25rem',
+        borderRadius: '0.5rem',
         marginBottom: '1rem',
         fontSize: '0.875rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+    },
+    successIcon: {
+        fontSize: '1.25rem',
     },
     form: {
         display: 'flex',
-        flexDirection: 'column' as const,
-        gap: '1rem',
+        flexDirection: 'column',
+        gap: '1.25rem',
     },
     inputGroup: {
         display: 'flex',
-        flexDirection: 'column' as const,
+        flexDirection: 'column',
     },
     label: {
         fontSize: '0.875rem',
         fontWeight: '500',
-        color: '#374151',
-        marginBottom: '0.25rem',
+        color: '#e2e8f0',
+        marginBottom: '0.5rem',
     },
     input: {
         padding: '0.75rem',
-        border: '1px solid #d1d5db',
-        borderRadius: '0.25rem',
+        border: '1px solid #475569',
+        borderRadius: '0.5rem',
         fontSize: '1rem',
         outline: 'none',
         transition: 'border-color 0.2s',
+        backgroundColor: '#0f172a',
+        color: '#e2e8f0',
     },
     submitButton: {
         color: 'white',
         border: 'none',
-        padding: '0.75rem',
-        borderRadius: '0.25rem',
+        padding: '0.875rem',
+        borderRadius: '0.5rem',
         fontSize: '1rem',
-        fontWeight: '500',
+        fontWeight: '600',
         cursor: 'pointer',
         marginTop: '0.5rem',
-        transition: 'background-color 0.2s',
+        transition: 'all 0.2s',
     },
     toggleContainer: {
         marginTop: '1.5rem',
-        textAlign: 'center' as const,
+        textAlign: 'center',
     },
     toggleText: {
         fontSize: '0.875rem',
-        color: '#6b7280',
+        color: '#94a3b8',
         marginBottom: '0.5rem',
     },
     toggleButton: {
         backgroundColor: 'transparent',
-        color: '#3b82f6',
+        color: '#10b981',
         border: 'none',
         fontSize: '0.875rem',
-        fontWeight: '500',
+        fontWeight: '600',
         cursor: 'pointer',
         textDecoration: 'underline',
     },
@@ -280,10 +319,21 @@ const styles = {
         marginTop: '1.5rem',
     },
     demoCredentials: {
-        backgroundColor: '#f9fafb',
+        backgroundColor: '#0f172a',
         padding: '1rem',
-        borderRadius: '0.25rem',
+        borderRadius: '0.5rem',
+        border: '1px solid #334155',
+    },
+    demoTitle: {
         fontSize: '0.875rem',
+        fontWeight: '600',
+        color: '#e2e8f0',
+        marginBottom: '0.5rem',
+    },
+    demoText: {
+        fontSize: '0.75rem',
+        color: '#94a3b8',
+        margin: '0.25rem 0',
     },
 };
 

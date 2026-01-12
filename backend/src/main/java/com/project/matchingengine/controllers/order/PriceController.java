@@ -1,7 +1,7 @@
 package com.project.matchingengine.controllers.order;
 
 import com.project.matchingengine.config.OrderBookConfig;
-import com.project.matchingengine.service.orderbook.OrderBook;
+import com.project.matchingengine.models.order.OrderBook;
 import com.project.matchingengine.models.order.Stock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

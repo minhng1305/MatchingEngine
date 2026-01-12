@@ -1,4 +1,4 @@
-import { Stock, Order, Trade, OrderBookSummary, LoginCredentials, AuthResponse } from '../types';
+import { Stock, Order, Trade, OrderBookSummary, OrderBookSummaryApiResponse, LoginCredentials, AuthResponse } from '../types';
 import { getServerForSymbol, getAllServerUrls } from './serverRouter';
 
 class ApiService {
@@ -131,8 +131,8 @@ class ApiService {
     }
 
     // ✅ CHANGED: Now routes to correct server based on symbol
-    async getStockDetail(symbol: string): Promise<OrderBookSummary> {
-        return this.requestWithSymbol<OrderBookSummary>(symbol, `/stocks/${symbol}`);
+    async getStockDetail(symbol: string): Promise<OrderBookSummaryApiResponse> {
+        return this.requestWithSymbol<OrderBookSummaryApiResponse>(symbol, `/stocks/${symbol}`);
     }
 
     // ✅ CHANGED: Now routes to correct server based on symbol

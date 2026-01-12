@@ -13,7 +13,7 @@ import com.project.matchingengine.service.orderbook.TradeService;
 import com.project.matchingengine.models.order.Trade;
 import com.project.matchingengine.models.order.Stock;
 import com.project.matchingengine.config.OrderBookConfig;
-import com.project.matchingengine.service.orderbook.OrderBook;
+import com.project.matchingengine.models.order.OrderBook;
 import com.project.matchingengine.models.order.OrderBookSummary;
 
 import java.util.Arrays;
@@ -72,7 +72,6 @@ public class StockController {
     @GetMapping("/{symbol}")
     public ResponseEntity<?> getStockDetail(@PathVariable String symbol) {
         try {
-            // Validate symbol
             Stock stock;
             try {
                 stock = Stock.valueOf(symbol.toUpperCase());

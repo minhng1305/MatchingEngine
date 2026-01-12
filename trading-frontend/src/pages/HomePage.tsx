@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Stock } from '../types';
 import { apiService } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
-import StockCard from '../components/StockCard';
 
 const HomePage: React.FC = () => {
     const [stocks, setStocks] = useState<Stock[]>([]);
@@ -11,23 +10,21 @@ const HomePage: React.FC = () => {
     const [error, setError] = useState('');
     const [connectionStatus, setConnectionStatus] = useState('Connecting...');
     const [priceChanges, setPriceChanges] = useState<Record<string, { prev: number; current: number }>>({});
+    const [searchQuery, setSearchQuery] = useState('');
     const navigate = useNavigate();
 
-    // ✅ FIX 1: Remove useWebSocket options (we'll handle connection manually)
     const { subscribeToMultiServerPrices } = useWebSocket();
 
     useEffect(() => {
         loadStocks();
     }, []);
 
-    // ✅ FIX 2: Connect immediately without waiting for isConnected
     useEffect(() => {
         console.log('Setting up multi-server price subscriptions...');
 
         subscribeToMultiServerPrices((priceData) => {
             console.log('📊 Received price update:', priceData);
 
-            // ✅ FIX 3: Update connection status on first message
             setConnectionStatus('Connected');
 
             if (priceData.prices) {
@@ -37,7 +34,6 @@ const HomePage: React.FC = () => {
                         if (newPrice !== undefined && newPrice !== stock.currentPrice) {
                             console.log(`💲 ${stock.symbol}: ${stock.currentPrice} → ${newPrice}`);
 
-                            // Track price changes for visual indicators
                             setPriceChanges(prev => ({
                                 ...prev,
                                 [stock.symbol]: {
@@ -63,8 +59,6 @@ const HomePage: React.FC = () => {
             console.error('❌ Failed to subscribe to multi-server prices:', err);
             setConnectionStatus('Error');
         });
-
-        // Cleanup is handled by useWebSocket hook
     }, [subscribeToMultiServerPrices]);
 
     const loadStocks = async () => {
@@ -76,7 +70,6 @@ const HomePage: React.FC = () => {
             console.log('✅ Loaded stocks:', stocksData);
             setStocks(stocksData);
 
-            // Initialize price changes tracking
             const initialChanges: Record<string, { prev: number; current: number }> = {};
             stocksData.forEach(stock => {
                 initialChanges[stock.symbol] = {
@@ -101,9 +94,9 @@ const HomePage: React.FC = () => {
     const getPriceChangeColor = (symbol: string) => {
         const change = priceChanges[symbol];
         if (!change) return '#1f2937';
-        if (change.current > change.prev) return '#10b981'; // Green for up
-        if (change.current < change.prev) return '#ef4444'; // Red for down
-        return '#1f2937'; // Default for no change
+        if (change.current > change.prev) return '#10b981';
+        if (change.current < change.prev) return '#ef4444';
+        return '#1f2937';
     };
 
     const getPriceChangeIndicator = (symbol: string) => {
@@ -117,7 +110,7 @@ const HomePage: React.FC = () => {
     const getStatusColor = () => {
         if (connectionStatus === 'Connected') return '#10b981';
         if (connectionStatus === 'Error') return '#ef4444';
-        return '#f59e0b'; // Orange for connecting
+        return '#f59e0b';
     };
 
     const getStatusEmoji = () => {
@@ -125,6 +118,11 @@ const HomePage: React.FC = () => {
         if (connectionStatus === 'Error') return '🔴';
         return '🟡';
     };
+
+    const filteredStocks = stocks.filter(stock =>
+        stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        stock.companyName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     if (loading) {
         return (
@@ -151,61 +149,76 @@ const HomePage: React.FC = () => {
         <div style={styles.container}>
             <div style={styles.header}>
                 <div>
-                    <h1 style={styles.title}>Live Stock Prices</h1>
+                    <h1 style={styles.title}>Live Stock Market</h1>
                     <p style={styles.subtitle}>Real-time updates • {stocks.length} stocks available</p>
                 </div>
                 <div style={styles.statusContainer}>
-          <span style={{...styles.status, color: getStatusColor()}}>
-            <span style={styles.statusDot}>
-              {getStatusEmoji()}
-            </span>
-              {connectionStatus}
-          </span>
+                    <span style={{...styles.status, color: getStatusColor()}}>
+                        <span style={styles.statusDot}>
+                            {getStatusEmoji()}
+                        </span>
+                        {connectionStatus}
+                    </span>
                     <button style={styles.refreshButton} onClick={loadStocks}>
-                        Refresh
+                        ↻ Refresh
                     </button>
                 </div>
             </div>
 
+            <div style={styles.searchContainer}>
+                <input
+                    type="text"
+                    placeholder="Search by symbol or company name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={styles.searchInput}
+                />
+            </div>
+
             <div style={styles.stocksGrid}>
-                {stocks.map((stock) => (
-                    <div
-                        key={stock.symbol}
-                        style={styles.stockCard}
-                        onClick={() => handleStockClick(stock.symbol)}
-                    >
-                        <div style={styles.stockHeader}>
-                            <h3 style={styles.symbol}>{stock.symbol}</h3>
-                            <div style={styles.priceContainer}>
-                <span
-                    style={{
-                        ...styles.price,
-                        color: getPriceChangeColor(stock.symbol)
-                    }}
-                >
-                  ${stock.currentPrice.toFixed(2)}
-                </span>
-                                <span
-                                    style={{
-                                        ...styles.changeIndicator,
-                                        color: getPriceChangeColor(stock.symbol)
-                                    }}
-                                >
-                  {getPriceChangeIndicator(stock.symbol)}
-                </span>
+                {filteredStocks.length > 0 ? (
+                    filteredStocks.map((stock) => (
+                        <div
+                            key={stock.symbol}
+                            style={styles.stockCard}
+                            onClick={() => handleStockClick(stock.symbol)}
+                        >
+                            <div style={styles.stockHeader}>
+                                <div>
+                                    <h3 style={styles.symbol}>{stock.symbol}</h3>
+                                    <p style={styles.companyName}>{stock.companyName}</p>
+                                </div>
+                                <div style={styles.priceContainer}>
+                                    <span
+                                        style={{
+                                            ...styles.price,
+                                            color: getPriceChangeColor(stock.symbol)
+                                        }}
+                                    >
+                                        ${stock.currentPrice.toFixed(2)}
+                                    </span>
+                                    <span
+                                        style={{
+                                            ...styles.changeIndicator,
+                                            color: getPriceChangeColor(stock.symbol)
+                                        }}
+                                    >
+                                        {getPriceChangeIndicator(stock.symbol)}
+                                    </span>
+                                </div>
+                            </div>
+                            <div style={styles.footer}>
+                                <span style={styles.esg}>
+                                    ESG: {stock.esgScore}
+                                </span>
+                                <span style={styles.clickHint}>View Details →</span>
                             </div>
                         </div>
-                        <p style={styles.companyName}>{stock.companyName}</p>
-                        <div style={styles.footer}>
-                            <span style={styles.esg}>ESG Score: {stock.esgScore}</span>
-                            <span style={styles.clickHint}>Click to trade →</span>
-                        </div>
-                    </div>
-                ))}
-                {stocks.length === 0 && !loading && (
+                    ))
+                ) : (
                     <div style={styles.noStocks}>
-                        <h3>No Stocks Available</h3>
-                        <p>Please check your backend connection</p>
+                        <h3>No Stocks Found</h3>
+                        <p>{searchQuery ? 'Try a different search term' : 'Please check your backend connection'}</p>
                     </div>
                 )}
             </div>
@@ -213,31 +226,35 @@ const HomePage: React.FC = () => {
     );
 };
 
-const styles = {
+const styles: { [key: string]: React.CSSProperties } = {
     container: {
-        maxWidth: '1200px',
+        maxWidth: '1600px',
         margin: '0 auto',
         padding: '2rem 1rem',
-        minHeight: '80vh',
+        minHeight: 'calc(100vh - 80px)',
     },
     header: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
         marginBottom: '2rem',
-        flexWrap: 'wrap' as const,
+        flexWrap: 'wrap',
         gap: '1rem',
     },
     title: {
-        fontSize: '2rem',
-        fontWeight: 'bold',
-        color: '#1f2937',
-        margin: 0,
+        fontSize: '2.5rem',
+        fontWeight: '700',
+        color: '#e2e8f0',
+        margin: '0 0 0.5rem 0',
+        background: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
     },
     subtitle: {
-        color: '#6b7280',
-        fontSize: '0.875rem',
-        margin: '0.25rem 0 0 0',
+        color: '#94a3b8',
+        fontSize: '1rem',
+        margin: 0,
     },
     statusContainer: {
         display: 'flex',
@@ -246,7 +263,7 @@ const styles = {
     },
     status: {
         fontSize: '0.875rem',
-        fontWeight: '600' as const,
+        fontWeight: '600',
         display: 'flex',
         alignItems: 'center',
         gap: '0.5rem',
@@ -255,112 +272,133 @@ const styles = {
         fontSize: '0.75rem',
     },
     refreshButton: {
-        backgroundColor: '#6b7280',
+        backgroundColor: '#10b981',
         color: 'white',
         border: 'none',
         padding: '0.5rem 1rem',
-        borderRadius: '0.25rem',
+        borderRadius: '0.5rem',
         cursor: 'pointer',
         fontSize: '0.875rem',
-        fontWeight: '500' as const,
+        fontWeight: '500',
+        transition: 'all 0.2s',
+    },
+    searchContainer: {
+        marginBottom: '2rem',
+    },
+    searchInput: {
+        width: '100%',
+        maxWidth: '500px',
+        padding: '0.75rem 1rem',
+        border: '2px solid #475569',
+        borderRadius: '0.5rem',
+        fontSize: '1rem',
+        outline: 'none',
+        transition: 'border-color 0.2s',
+        backgroundColor: '#1e293b',
+        color: '#e2e8f0',
     },
     loading: {
-        textAlign: 'center' as const,
+        textAlign: 'center',
         padding: '4rem',
         display: 'flex',
-        flexDirection: 'column' as const,
+        flexDirection: 'column',
         alignItems: 'center',
         gap: '1rem',
+        color: '#94a3b8',
     },
     spinner: {
-        width: '2rem',
-        height: '2rem',
-        border: '3px solid #f3f4f6',
-        borderTop: '3px solid #3b82f6',
+        width: '3rem',
+        height: '3rem',
+        border: '4px solid #1e293b',
+        borderTop: '4px solid #10b981',
         borderRadius: '50%',
         animation: 'spin 1s linear infinite',
     },
     error: {
-        textAlign: 'center' as const,
+        textAlign: 'center',
         padding: '4rem',
-        color: '#ef4444',
+        color: '#f87171',
     },
     retryButton: {
-        backgroundColor: '#3b82f6',
+        backgroundColor: '#10b981',
         color: 'white',
         border: 'none',
         padding: '0.75rem 1.5rem',
-        borderRadius: '0.25rem',
+        borderRadius: '0.5rem',
         cursor: 'pointer',
         marginTop: '1rem',
-        fontWeight: '500' as const,
+        fontWeight: '500',
     },
     stocksGrid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
         gap: '1.5rem',
     },
     stockCard: {
-        backgroundColor: 'white',
-        border: '1px solid #e5e7eb',
-        borderRadius: '0.5rem',
+        backgroundColor: '#1e293b',
+        border: '1px solid #334155',
+        borderRadius: '0.75rem',
         padding: '1.5rem',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
     },
     stockHeader: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        marginBottom: '0.5rem',
+        marginBottom: '1rem',
     },
     symbol: {
-        fontSize: '1.25rem',
-        fontWeight: 'bold' as const,
-        color: '#1f2937',
+        fontSize: '1.5rem',
+        fontWeight: '700',
+        color: '#e2e8f0',
+        margin: '0 0 0.25rem 0',
+    },
+    companyName: {
+        color: '#94a3b8',
+        fontSize: '0.875rem',
         margin: 0,
+        lineHeight: '1.25',
     },
     priceContainer: {
         display: 'flex',
         alignItems: 'center',
-        gap: '0.25rem',
+        gap: '0.5rem',
     },
     price: {
-        fontSize: '1.125rem',
-        fontWeight: 'bold' as const,
+        fontSize: '1.5rem',
+        fontWeight: '700',
     },
     changeIndicator: {
-        fontSize: '1rem',
-        fontWeight: 'bold' as const,
-    },
-    companyName: {
-        color: '#6b7280',
-        fontSize: '0.875rem',
-        margin: '0.5rem 0 1rem 0',
-        lineHeight: '1.25',
+        fontSize: '1.25rem',
+        fontWeight: '700',
     },
     footer: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        paddingTop: '1rem',
+        borderTop: '1px solid #334155',
     },
     esg: {
         fontSize: '0.75rem',
-        color: '#9ca3af',
-        backgroundColor: '#f3f4f6',
-        padding: '0.25rem 0.5rem',
-        borderRadius: '0.25rem',
+        color: '#cbd5e1',
+        backgroundColor: '#0f172a',
+        padding: '0.25rem 0.75rem',
+        borderRadius: '0.375rem',
+        fontWeight: '500',
     },
     clickHint: {
         fontSize: '0.75rem',
-        color: '#3b82f6',
-        fontWeight: '500' as const,
+        color: '#10b981',
+        fontWeight: '600',
     },
     noStocks: {
-        textAlign: 'center' as const,
-        color: '#9ca3af',
+        textAlign: 'center',
+        color: '#64748b',
         padding: '4rem',
+        gridColumn: '1 / -1',
     },
 };
 

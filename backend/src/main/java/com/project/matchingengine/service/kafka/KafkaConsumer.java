@@ -11,8 +11,9 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.matchingengine.config.OrderBookConfig;
 import com.project.matchingengine.models.order.Order;
-import com.project.matchingengine.service.orderbook.OrderBook;
+import com.project.matchingengine.models.order.OrderBook;
 import com.project.matchingengine.service.websocket.WebSocketNotificationService;
+import com.project.matchingengine.repository.order.OrderRepo;
 
 @Service
 public class KafkaConsumer {
@@ -20,15 +21,18 @@ public class KafkaConsumer {
     private final ObjectMapper objectMapper;
     private final OrderBookConfig orderBookConfig;
     private final WebSocketNotificationService notificationService;
+    private final OrderRepo orderRepo;
     private CountDownLatch latch;
 
     @Autowired 
     public KafkaConsumer(ObjectMapper objectMapper,
                          OrderBookConfig orderBookConfig,
-                         WebSocketNotificationService notificationService) {
+                         WebSocketNotificationService notificationService,
+                         OrderRepo orderRepo) {
         this.objectMapper = objectMapper;
         this.orderBookConfig = orderBookConfig;
         this.notificationService = notificationService;
+        this.orderRepo = orderRepo;
     }
 
     public void setLatch(CountDownLatch latch) {
@@ -47,6 +51,11 @@ public class KafkaConsumer {
 
             logger.info("Processing order from symbol-specific topic: {} for symbol: {}",
                     order.getOrderId(), order.getSymbol());
+
+            // Save order to database first (with initial status) before processing
+            // This ensures orders exist when trades reference them
+            orderRepo.save(order);
+            logger.debug("Order {} saved to database with status: {}", order.getOrderId(), order.getStatus());
 
             OrderBook orderBook = orderBookConfig.getOrderBook(order.getSymbol());
 

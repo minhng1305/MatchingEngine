@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import HomePage from './pages/HomePage';
 import StockDetailPage from './pages/StockDetailPage';
 import LoginPage from './pages/LoginPage';
-import ProfilePage from './pages/ProfilePage'; // ✅ NEW IMPORT
+import ProfilePage from './pages/ProfilePage';
 import Navigation from './components/Navigation';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -13,6 +13,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     if (loading) {
         return (
             <div style={styles.loading}>
+                <div style={styles.spinner}></div>
                 <div>Loading...</div>
             </div>
         );
@@ -46,7 +47,6 @@ const AppRoutes: React.FC = () => {
                             </ProtectedRoute>
                         }
                     />
-                    {/* ✅ NEW ROUTE: User profile page */}
                     <Route
                         path="/profile"
                         element={
@@ -72,21 +72,32 @@ const App: React.FC = () => {
     );
 };
 
-const styles = {
+const styles: { [key: string]: React.CSSProperties } = {
     app: {
         minHeight: '100vh',
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#0f172a',
     },
     main: {
         minHeight: '100vh',
+        backgroundColor: '#0f172a',
     },
     loading: {
         display: 'flex',
+        flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
         minHeight: '100vh',
         fontSize: '1.125rem',
-        color: '#6b7280',
+        color: '#94a3b8',
+        gap: '1rem',
+    },
+    spinner: {
+        width: '3rem',
+        height: '3rem',
+        border: '4px solid #1e293b',
+        borderTop: '4px solid #10b981',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite',
     },
 };
 
