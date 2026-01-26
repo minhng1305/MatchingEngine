@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.UUID;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import com.project.matchingengine.service.authentication.UserDetailsCacheService;
 
@@ -21,6 +24,10 @@ public class OrderBook {
     private final Queue<Order> lastTenFulfilledOrders;
     private final UserDetailsCacheService userDetailsCacheService;
     private final OrderBookSummary orderBookSummary;
+
+    private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    private final ReadLock readLock = lock.readLock();
+    private final WriteLock writeLock = lock.writeLock();
 
     public OrderBook(String symbol,
                      UserDetailsCacheService userDetailsCacheService)
@@ -43,28 +50,35 @@ public class OrderBook {
         return symbol;
     }
 
+
     public void addOrder(Order order) {
-        if (order.getSide() == OrderSide.BUY) {
-            matchBuyOrder(order);
-            if (order.getCurrentQuantity() > 0) {
-                buyOrdersList.add(order);
+        writeLock.lock();
+        try {
+            if (order.getSide() == OrderSide.BUY) {
+                matchBuyOrder(order);
+                if (order.getCurrentQuantity() > 0) {
+                    buyOrdersList.add(order);
+                } else {
+                    processFullyFilledOrders(order);
+                }
             } else {
-                processFullyFilledOrders(order);
+                matchSellOrder(order);
+                if (order.getCurrentQuantity() > 0) {
+                    sellOrdersList.add(order);
+                } else {
+                    processFullyFilledOrders(order);
+                }
             }
-        } else {
-            matchSellOrder(order);
-            if (order.getCurrentQuantity() > 0) {
-                sellOrdersList.add(order);
-            } else {
-                processFullyFilledOrders(order);
+            if (!trades.isEmpty()) {
+                this.currentPrice = trades.get(trades.size() - 1).getPrice();
             }
-        }
-        if (!trades.isEmpty()) {
-            this.currentPrice = trades.get(trades.size() - 1).getPrice();
+        } finally {
+            writeLock.unlock();
         }
     }
 
-    public void matchBuyOrder(Order buyOrder) {
+    // TODO: Orders from same user should not match at all. Yet Error continues to exist
+    private void matchBuyOrder(Order buyOrder) {
         while (!sellOrdersList.isEmpty() && buyOrder.getCurrentQuantity() > 0) {
             Order sellOrder = sellOrdersList.peek();
             if (buyOrder.getUserId() != sellOrder.getUserId() && buyOrder.getPrice() >= sellOrder.getPrice()) {
@@ -102,8 +116,9 @@ public class OrderBook {
             }
         }
     }
-    
-    public void matchSellOrder(Order sellOrder) {
+
+    // TODO: Orders from same user should not match at all. Yet Error continues to exist
+    private void matchSellOrder(Order sellOrder) {
         while (!buyOrdersList.isEmpty() && sellOrder.getCurrentQuantity() > 0) {
             Order buyOrder = buyOrdersList.peek();
             if (buyOrder.getUserId() != sellOrder.getUserId() && sellOrder.getPrice() <= buyOrder.getPrice()) {
@@ -141,9 +156,6 @@ public class OrderBook {
         }
     }
 
-    /*
-     * This is to determine the trade price based on both the market maker and market taker orders.
-     * */
     public double getTradePrice(Order buyOrder, Order sellOrder) {
         double tradePrice = 0.0;
 
@@ -165,8 +177,8 @@ public class OrderBook {
         return tradePrice;
     }
 
-    public void processFullyFilledOrders(Order order) {
-        System.out.println(symbol + " - Order fully fulfilled and removed from " + order.getSide() + " side of order book: " + order.getOrderId());
+
+    private void processFullyFilledOrders(Order order) {
         order.setStatus(OrderStatus.FILLED);
 
         lastTenFulfilledOrders.offer(order);
@@ -176,96 +188,118 @@ public class OrderBook {
     }
 
     public ArrayList<Trade> getTrades() {
-        return trades;
+        readLock.lock();
+        try {
+            return new ArrayList<>(trades); // Return copy to prevent external modification
+        } finally {
+            readLock.unlock();
+        }
     }
-
 
     public ArrayList<Trade> getMostRecent10Trades() {
-        int start = Math.max(0, trades.size() - 10);
-        return new ArrayList<>(trades.subList(start, trades.size()));
+        readLock.lock();
+        try {
+            int start = Math.max(0, trades.size() - 10);
+            return new ArrayList<>(trades.subList(start, trades.size()));
+        } finally {
+            readLock.unlock();
+        }
     }
 
-
     public double getCurrentPrice() {
-        if (trades == null || trades.isEmpty()) {
-            return 0.0; // Or another default value like -1 or Double.NaN
+        readLock.lock();
+        try {
+            if (trades == null || trades.isEmpty()) {
+                return 0.0; // Or another default value like -1 or Double.NaN
+            }
+            // Update currentPrice from last trade
+            this.currentPrice = trades.get(trades.size() - 1).getPrice();
+            return currentPrice;
+        } finally {
+            readLock.unlock();
         }
-        this.currentPrice = trades.get(trades.size() - 1).getPrice();
-        return currentPrice;
     }
 
     public OrderBookSummary getOrderBookSummary() {
-        return this.orderBookSummary;
+        readLock.lock();
+        try {
+            return this.orderBookSummary;
+        } finally {
+            readLock.unlock();
+        }
     }
 
     public void updateOrderBookSummary() {
-        List<Order> topBuys = new ArrayList<>();
-        List<Order> lowestSells = new ArrayList<>();
+        readLock.lock();
+        try {
+            List<Order> topBuys = new ArrayList<>();
+            List<Order> lowestSells = new ArrayList<>();
 
-        // Get top 5 buy orders
-        PriorityQueue<Order> tempBuyOrders = new PriorityQueue<>(buyOrdersList);
-        for (int i = 0; i < 5 && !tempBuyOrders.isEmpty(); i++) {
-            topBuys.add(tempBuyOrders.poll());
-        } 
-        // Get bottom 5 sell orders
-        PriorityQueue<Order> tempSellOrders = new PriorityQueue<>(sellOrdersList);
-        for (int i = 0; i < 5 && !tempSellOrders.isEmpty(); i++) {
-            lowestSells.add(tempSellOrders.poll());
-        }
-        
-        // Safely get best bid (buy) price and quantity, defaulting to 0 if queue is empty
-        double bestBidPrice = 0.0;
-        int bestBidQuantity = 0;
-        if (!buyOrdersList.isEmpty()) {
-            Order bestBid = buyOrdersList.peek();
-            if (bestBid != null) {
-                bestBidPrice = bestBid.getPrice();
-                bestBidQuantity = bestBid.getCurrentQuantity();
+            // Get top 5 buy orders
+            PriorityQueue<Order> tempBuyOrders = new PriorityQueue<>(buyOrdersList);
+            for (int i = 0; i < 5 && !tempBuyOrders.isEmpty(); i++) {
+                topBuys.add(tempBuyOrders.poll());
+            } 
+            // Get bottom 5 sell orders
+            PriorityQueue<Order> tempSellOrders = new PriorityQueue<>(sellOrdersList);
+            for (int i = 0; i < 5 && !tempSellOrders.isEmpty(); i++) {
+                lowestSells.add(tempSellOrders.poll());
             }
-        }
-        
-        // Safely get best ask (sell) price and quantity, defaulting to 0 if queue is empty
-        double bestAskPrice = 0.0;
-        int bestAskQuantity = 0;
-        if (!sellOrdersList.isEmpty()) {
-            Order bestAsk = sellOrdersList.peek();
-            if (bestAsk != null) {
-                bestAskPrice = bestAsk.getPrice();
-                bestAskQuantity = bestAsk.getCurrentQuantity();
+            // Safely get best bid (buy) price and quantity, defaulting to 0 if queue is empty
+            double bestBidPrice = 0.0;
+            int bestBidQuantity = 0;
+            if (!buyOrdersList.isEmpty()) {
+                Order bestBid = buyOrdersList.peek();
+                if (bestBid != null) {
+                    bestBidPrice = bestBid.getPrice();
+                    bestBidQuantity = bestBid.getCurrentQuantity();
+                }
             }
+            // Safely get best ask (sell) price and quantity, defaulting to 0 if queue is empty
+            double bestAskPrice = 0.0;
+            int bestAskQuantity = 0;
+            if (!sellOrdersList.isEmpty()) {
+                Order bestAsk = sellOrdersList.peek();
+                if (bestAsk != null) {
+                    bestAskPrice = bestAsk.getPrice();
+                    bestAskQuantity = bestAsk.getCurrentQuantity();
+                }
+            }
+            orderBookSummary.updateOrderBookSummary(
+                    topBuys,
+                    lowestSells,
+                    currentPrice,
+                    bestBidPrice,
+                    bestBidQuantity,
+                    bestAskPrice,
+                    bestAskQuantity,
+                    getMostRecent10Trades());
+        } finally {
+            readLock.unlock();
         }
-        
-        orderBookSummary.updateOrderBookSummary(
-                topBuys,
-                lowestSells,
-                currentPrice,
-                bestBidPrice,
-                bestBidQuantity,
-                bestAskPrice,
-                bestAskQuantity,
-                getMostRecent10Trades());
     }
+
 
     public void clearTradeRecords() {
-        this.trades.clear();
+        writeLock.lock();
+        try {
+            this.trades.clear();
+        } finally {
+            writeLock.unlock();
+        }
     }
 
-    /**
-     * Get all orders that need to be persisted to the database.
-     * This includes active orders (in queues) and fully filled orders.
-     */
+
     public List<Order> getAllOrdersToUpdate() {
-        List<Order> ordersToUpdate = new ArrayList<>();
-        
-        // Add all active buy orders
-        ordersToUpdate.addAll(buyOrdersList);
-        
-        // Add all active sell orders
-        ordersToUpdate.addAll(sellOrdersList);
-        
-        // Add all fully filled orders
-        ordersToUpdate.addAll(lastTenFulfilledOrders);
-        
-        return ordersToUpdate;
+        readLock.lock();
+        try {
+            List<Order> ordersToUpdate = new ArrayList<>();
+            ordersToUpdate.addAll(new ArrayList<>(buyOrdersList));
+            ordersToUpdate.addAll(new ArrayList<>(sellOrdersList));
+            ordersToUpdate.addAll(new ArrayList<>(lastTenFulfilledOrders));
+            return ordersToUpdate;
+        } finally {
+            readLock.unlock();
+        }
     }
 }

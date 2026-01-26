@@ -1,3 +1,3 @@
 # MatchingEngine
 
-Documentation: https://minhng1305.gitbook.io/matching-engine/ 
+This project implements a trading engine with post-trade logic.

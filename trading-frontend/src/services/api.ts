@@ -5,6 +5,7 @@ class ApiService {
     private token: string | null = null;
 
     private defaultBaseUrl = 'http://localhost:8080/api';
+    private ingressBaseUrl = 'http://localhost:8085/api';
 
     setToken(token: string) {
         this.token = token;
@@ -51,6 +52,26 @@ class ApiService {
     // ✅ EXISTING METHOD: For non-symbol-specific requests
     private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
         const url = `${this.defaultBaseUrl}${endpoint}`;
+
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                ...this.getHeaders(),
+                ...options.headers,
+            },
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ message: 'Network error' }));
+            throw new Error(error.message || `HTTP error! status: ${response.status}`);
+        }
+
+        return response.json();
+    }
+
+    // ✅ NEW METHOD: For requests to ingress server (order submission)
+    private async requestToIngress<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+        const url = `${this.ingressBaseUrl}${endpoint}`;
 
         const response = await fetch(url, {
             ...options,
@@ -144,10 +165,10 @@ class ApiService {
     // Orders (symbol-specific)
     // ========================================
 
-    // ✅ CHANGED: Now routes to correct server based on order.symbol
+    // ✅ CHANGED: Routes ALL orders to ingress server (8085) which sends to Kafka
     async submitOrder(order: Order): Promise<{ success: boolean; orderId: string; message: string }> {
-        console.log(`[API] 📤 Submitting ${order.side} order for ${order.symbol} (qty: ${order.quantity}, price: ${order.price})`);
-        return this.requestWithSymbol(order.symbol, '/orders/submit', {
+        console.log(`[API] 📤 Submitting ${order.side} order for ${order.symbol} (qty: ${order.quantity}, price: ${order.price}) via ingress server`);
+        return this.requestToIngress('/orders/submit', {
             method: 'POST',
             body: JSON.stringify(order),
         });
@@ -182,7 +203,12 @@ class ApiService {
     // ========================================
 
     async getUserProfile(): Promise<{
-        user: { userId: string; username: string; email: string };
+        user: { userId: string; username: string; email: string; ledgerBalance?: number; availableBalance?: number };
+        account?: {
+            ledgerBalance: number;
+            availableBalance: number;
+            holdings: Record<string, number>;
+        };
         statistics: {
             totalOrders: number;
             pendingOrders: number;
@@ -204,7 +230,14 @@ class ApiService {
         return this.request<Trade[]>('/user/trades');
     }
 
-    async getUserInfo(): Promise<{ userId: string; username: string; email: string }> {
+    async getUserInfo(): Promise<{ 
+        userId: string; 
+        username: string; 
+        email: string; 
+        ledgerBalance: number; 
+        availableBalance: number; 
+        holdings: Record<string, number> 
+    }> {
         return this.request('/user/info');
     }
 }

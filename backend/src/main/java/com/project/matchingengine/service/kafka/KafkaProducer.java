@@ -11,42 +11,51 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.matchingengine.models.order.Order;
 
 
+/*
+    * TODO:
+    * Use single topic: `orders`
+    * Key = `order.getSymbol()` (not orderId)
+    * This ensures symbol-based partitioning
+ */
 @Service
 public class KafkaProducer {
     private static final Logger logger = LoggerFactory.getLogger(KafkaProducer.class);
     private final ObjectMapper objectMapper;
     private final KafkaTemplate<String, String> kafkaTemplate;
 
-    @Value("${app.kafka.topics.order-submission-prefix:order-}")
-    private String orderTopicPrefix;
-
+    @Value("${app.kafka.topic.orders:orders}")
+    private String ordersTopic;
 
     public KafkaProducer(KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper) {
         this.kafkaTemplate = kafkaTemplate;
         this.objectMapper = objectMapper;
     }
 
-
+    /**
+     * Sends order to Kafka topic "orders" with key = symbol.
+     * 
+     * Keying by symbol ensures:
+     * - All orders for the same symbol go to the same partition
+     * - Ordering is preserved per symbol
+     * - Parallel processing across different symbols
+     * 
+     * @param order The order to send
+     */
     public void sendOrder(Order order) {
         try {
             String orderJson = objectMapper.writeValueAsString(order);
-            String topicName = generateTopicName(order.getSymbol());
-
-            kafkaTemplate.send(topicName, order.getOrderId().toString(), orderJson);
-            logger.info("Order {} sent to topic: {}", order.getOrderId().toString(), topicName);
+            String symbol = order.getSymbol();
+            
+            if (symbol == null || symbol.trim().isEmpty()) {
+                throw new IllegalArgumentException("Order symbol cannot be null or empty");
+            }
+            kafkaTemplate.send(ordersTopic, symbol, orderJson);
+            logger.info("Order {} sent to topic: {} with key (symbol): {}", 
+                order.getOrderId().toString(), ordersTopic, symbol);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize order to JSON", e);
         }
     }
-
-    private String generateTopicName(String symbol) {
-        if (symbol == null || symbol.trim().isEmpty()) {
-            throw new IllegalArgumentException("Order symbol cannot be null or empty");
-        }
-        String cleanSymbol = symbol.replaceAll("[^a-zA-Z0-9]", "").toLowerCase();
-        return orderTopicPrefix + cleanSymbol;
-    }
-
 
     public void flushProducer() {
         kafkaTemplate.flush();

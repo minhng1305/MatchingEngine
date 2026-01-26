@@ -2,7 +2,12 @@
  * Server Router for Multi-Server Matching Engine
  *
  * This service maps stock symbols to their corresponding backend servers.
- * Each server processes specific symbols as configured in backend application.properties:
+ * Each server processes specific symbols as configured in backend application.properties.
+ *
+ * ARCHITECTURE:
+ * - Order Submission: ALL orders go to Ingress Server (8085) → Kafka → Matching Servers
+ * - Read Operations: Symbol-based routing to matching servers (8080/8081/8082)
+ *   Each server maintains OrderBooks for symbols it processes
  *
  * CURRENT SETUP: Single server (8080) handling all symbols
  * Server 1 (8080): AAPL, GOOGL, MSFT, AMZN, TSLA, META, NFLX

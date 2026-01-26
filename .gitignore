@@ -5,3 +5,7 @@
 build
 
 .fake
+
+# Ignore secrets folder (contains sensitive credentials)
+# Exclude actual secret file but allow .example file and README
+secrets/secrets.properties

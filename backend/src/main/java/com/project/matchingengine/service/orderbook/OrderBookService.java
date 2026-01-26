@@ -1,20 +1,21 @@
 package com.project.matchingengine.service.orderbook;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import com.project.matchingengine.models.order.OrderBook;
 import com.project.matchingengine.models.order.Order;
-import com.project.matchingengine.repository.order.TradeRepo;
+import com.project.matchingengine.models.order.OrderBook;
+import com.project.matchingengine.models.order.Trade;
 import com.project.matchingengine.repository.order.OrderRepo;
-
-import java.util.Map;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.stream.Collectors;
+import com.project.matchingengine.repository.order.TradeRepo;
 
 
 @Service
@@ -42,14 +43,15 @@ public class OrderBookService
             List<Order> allOrdersToUpdate = new ArrayList<>();
             
             for (OrderBook orderBook : orderBooks.values()) {
-                // Save trades first (this ensures orders already exist in DB due to fix in KafkaConsumer)
-                if (!orderBook.getTrades().isEmpty()) {
-                    tradeRepo.saveAll(orderBook.getTrades());
-                    logger.debug("Saved {} trades for symbol: {}", orderBook.getTrades().size(), orderBook.getSymbol());
+                // Take a snapshot of trades to avoid ConcurrentModificationException when clearing
+                List<Trade> tradesSnapshot = new ArrayList<>(orderBook.getTrades());
+                if (!tradesSnapshot.isEmpty()) {
+                    tradeRepo.saveAll(tradesSnapshot);
+                    logger.debug("Saved {} trades for symbol: {}", tradesSnapshot.size(), orderBook.getSymbol());
                 }
                 
-                // Collect orders that need updating (active and filled orders)
-                allOrdersToUpdate.addAll(orderBook.getAllOrdersToUpdate());
+                // Collect orders that need updating (active and filled orders) using a snapshot
+                allOrdersToUpdate.addAll(new ArrayList<>(orderBook.getAllOrdersToUpdate()));
                 
                 orderBook.updateOrderBookSummary();
                 orderBook.clearTradeRecords();

@@ -1,19 +1,26 @@
 package com.project.matchingengine.controllers.authentication;
 
 
-import com.project.matchingengine.repository.order.OrderRepo;
-import com.project.matchingengine.repository.order.TradeRepo;
-import com.project.matchingengine.repository.authentication.UserRepo;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.project.matchingengine.models.authentication.User;
 import com.project.matchingengine.models.order.Order;
 import com.project.matchingengine.models.order.Trade;
-
-import java.util.*;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.http.ResponseEntity;
+import com.project.matchingengine.repository.authentication.UserRepo;
+import com.project.matchingengine.repository.order.OrderRepo;
+import com.project.matchingengine.repository.order.TradeRepo;
+import com.project.matchingengine.service.authentication.UserDetailsCacheService;
 
 
 @RestController
@@ -24,13 +31,15 @@ public class UserController
     private final UserRepo userRepo;
     private final OrderRepo orderRepo;
     private final TradeRepo tradeRepo;
+    private final UserDetailsCacheService userDetailsCacheService;
 
     @Autowired
-    public UserController(UserRepo userRepo, OrderRepo orderRepo, TradeRepo tradeRepo)
+    public UserController(UserRepo userRepo, OrderRepo orderRepo, TradeRepo tradeRepo, UserDetailsCacheService userDetailsCacheService)
     {
         this.userRepo = userRepo;
         this.orderRepo = orderRepo;
         this.tradeRepo = tradeRepo;
+        this.userDetailsCacheService = userDetailsCacheService;
     }
 
     @GetMapping("/info")
@@ -45,13 +54,17 @@ public class UserController
 
             User user = userOpt.get();
 
-            // Return user info without password
+            // Get account balance and holdings from cache (real-time data)
+            UserDetailsCacheService.CachedUserDetails cachedDetails = userDetailsCacheService.getBalance(user.getUserId());
+
+            // Return user info without password, with balance from cache
             Map<String, Object> userInfo = new HashMap<>();
             userInfo.put("userId", user.getUserId().toString());
             userInfo.put("username", user.getUsername());
             userInfo.put("email", user.getEmail());
-            userInfo.put("ledgerBalance", user.getLedgerBalance());
-            userInfo.put("availableBalance", user.getAvailableBalance());
+            userInfo.put("ledgerBalance", cachedDetails.ledgerBalance);
+            userInfo.put("availableBalance", cachedDetails.availableBalance);
+            userInfo.put("holdings", cachedDetails.holdings);
 
             return ResponseEntity.ok(userInfo);
         } catch (Exception e) {
@@ -71,6 +84,9 @@ public class UserController
 
             User user = userOpt.get();
 
+            // Get account balance and holdings from cache (real-time data)
+            UserDetailsCacheService.CachedUserDetails cachedDetails = userDetailsCacheService.getBalance(user.getUserId());
+
             // Get user's orders and trades
             List<Order> userOrders = orderRepo.findByUserIdOrderByOrderTimestampDesc(user.getUserId());
             List<Trade> userTrades = tradeRepo.findByBuyerUserIdOrSellerUserIdOrderByTradeTimestampDesc(user.getUserId(), user.getUserId());
@@ -88,15 +104,23 @@ public class UserController
                     .mapToDouble(trade -> trade.getPrice() * trade.getQuantity())
                     .sum();
 
-            // Build response
+            // Build response with account info from cache
             Map<String, Object> profile = new HashMap<>();
-            profile.put("user", Map.of(
-                    "userId", user.getUserId().toString(),
-                    "username", user.getUsername(),
-                    "email", user.getEmail(),
-                    "ledgerBalance", user.getLedgerBalance(),
-                    "availableBalance", user.getAvailableBalance()
-            ));
+            Map<String, Object> userInfo = new HashMap<>();
+            userInfo.put("userId", user.getUserId().toString());
+            userInfo.put("username", user.getUsername());
+            userInfo.put("email", user.getEmail());
+            userInfo.put("ledgerBalance", cachedDetails.ledgerBalance);
+            userInfo.put("availableBalance", cachedDetails.availableBalance);
+            profile.put("user", userInfo);
+            
+            // Add account and holdings
+            Map<String, Object> account = new HashMap<>();
+            account.put("ledgerBalance", cachedDetails.ledgerBalance);
+            account.put("availableBalance", cachedDetails.availableBalance);
+            account.put("holdings", cachedDetails.holdings);
+            profile.put("account", account);
+            
             profile.put("statistics", Map.of(
                     "totalOrders", totalOrders,
                     "pendingOrders", pendingOrders,

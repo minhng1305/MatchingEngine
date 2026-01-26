@@ -17,7 +17,7 @@ import org.springframework.kafka.core.ProducerFactory;
 
 @Configuration
 public class KafkaProducerConfig {
-    @Value("${spring.kafka.consumer.bootstrap-servers}")
+    @Value("${spring.kafka.producer.bootstrap-servers}")
     private String bootstrapServers;
 
     @Bean
@@ -26,7 +26,19 @@ public class KafkaProducerConfig {
         configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        
+        // Idempotent producer: ensures exactly-once semantics
         configProps.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+        
+        // Acks=all: wait for all replicas to acknowledge (highest durability)
+        configProps.put(ProducerConfig.ACKS_CONFIG, "all");
+        
+        // Retry on transient failures
+        configProps.put(ProducerConfig.RETRIES_CONFIG, 3);
+        
+        // For idempotence: max in-flight requests per connection must be <= 5
+        configProps.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 5);
+        
         return new DefaultKafkaProducerFactory<>(configProps);
     }
     @Bean

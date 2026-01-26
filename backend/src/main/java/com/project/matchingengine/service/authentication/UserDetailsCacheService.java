@@ -31,6 +31,7 @@ import com.project.matchingengine.repository.authentication.UserRepo;
  * This is the only service that accesses the database directly.
  * Other services should use this service to fetch from the cache instead of directly accessing the database.
  */
+// TODO: Update such that when cache updates to database, it should maintained a fixed-size trade record in the cache to fetch to frontend for real-time trading
 @Service
 public class UserDetailsCacheService {
     private static final Logger logger = LoggerFactory.getLogger(UserDetailsCacheService.class);
@@ -116,8 +117,6 @@ public class UserDetailsCacheService {
                         Portfolio::getQuantity,
                         Integer::sum  // Handle duplicates
                 ));
-
-        // Create cache entry
         CachedUserDetails balance = new CachedUserDetails(
                 userId,
                 user.getLedgerBalance(),
@@ -189,6 +188,7 @@ public class UserDetailsCacheService {
      * Background task to clean up stale cache entries
      */
     // TODO: When entry is removed, should update the entry data onto DB first before removing it from cache
+    // TODO: Verify if the updates are correctly applied to the DB
     @Scheduled(fixedRate = 300000)  // Every 5 mins
     public void evictStaleEntries() {
         long now = System.currentTimeMillis();
@@ -218,7 +218,7 @@ public class UserDetailsCacheService {
      * Background task to update changes to all schemas inside DB
      */
     // TODO: Update all schemas inside DB
-    @Scheduled(fixedRate = 5000)
+    @Scheduled(fixedRate = 5000) // Every 5 seconds
     @Transactional
     public void updateDatabase() {
         try {
@@ -246,6 +246,7 @@ public class UserDetailsCacheService {
             logger.info("Updated {} user records", usersToUpdate.size());
 
             // Step 2: Update Portfolio table
+            // TODO: Remove the database call for the portfolio table
             List<Portfolio> portfoliosToUpdate = new ArrayList<>();
             List<Portfolio> portfoliosToDelete = new ArrayList<>();
             
@@ -289,12 +290,6 @@ public class UserDetailsCacheService {
             if (!portfoliosToUpdate.isEmpty()) {
                 portfolioRepo.saveAll(portfoliosToUpdate);
                 logger.info("Updated/Inserted {} portfolio records", portfoliosToUpdate.size());
-            }
-            
-            // Delete zero-quantity portfolios
-            if (!portfoliosToDelete.isEmpty()) {
-                portfolioRepo.deleteAll(portfoliosToDelete);
-                logger.info("Deleted {} zero-quantity portfolio records", portfoliosToDelete.size());
             }
 
             // Step 3: Clear dirty tracking
