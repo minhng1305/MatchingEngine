@@ -16,9 +16,10 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.project.matchingengine.models.authentication.Portfolio;
 import com.project.matchingengine.models.authentication.User;
@@ -32,6 +33,7 @@ import com.project.matchingengine.repository.authentication.UserRepo;
  * Other services should use this service to fetch from the cache instead of directly accessing the database.
  */
 // TODO: Update such that when cache updates to database, it should maintained a fixed-size trade record in the cache to fetch to frontend for real-time trading
+// TODO: Change this from in-memory cache to Redis cache for better scalability
 @Service
 public class UserDetailsCacheService {
     private static final Logger logger = LoggerFactory.getLogger(UserDetailsCacheService.class);

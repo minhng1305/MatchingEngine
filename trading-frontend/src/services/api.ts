@@ -4,8 +4,9 @@ import { getServerForSymbol, getAllServerUrls } from './serverRouter';
 class ApiService {
     private token: string | null = null;
 
-    private defaultBaseUrl = 'http://localhost:8080/api';
-    private ingressBaseUrl = 'http://localhost:8085/api';
+    // Use environment variables with fallback to localhost for development
+    private defaultBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api';
+    private ingressBaseUrl = process.env.REACT_APP_INGRESS_BASE_URL || 'http://localhost:8085/api';
 
     setToken(token: string) {
         this.token = token;

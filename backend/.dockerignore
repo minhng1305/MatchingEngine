@@ -1,0 +1,48 @@
+# Build artifacts
+.gradle
+build
+out
+bin
+*.jar
+*.war
+*.ear
+
+# IDE files
+.idea
+*.iml
+.vscode
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+src/test
+
+# Secrets (should never be in Docker image)
+secrets
+*.properties
+!application*.properties
+
+# Kafka (local)
+kafka_*
+
+# Dumps
+*.rdb
+dump.rdb

@@ -31,10 +31,17 @@ export interface ServerConfig {
  * CURRENT CONFIGURATION: All symbols on port 8080
  * To use multiple servers, uncomment the other server configs and update symbols accordingly
  */
+// Get base URL from environment variable, fallback to localhost for development
+const getBaseUrl = (envVar: string, defaultPort: number): string => {
+    const envUrl = process.env[envVar];
+    if (envUrl) return envUrl;
+    return `http://localhost:${defaultPort}`;
+};
+
 export const SERVER_CONFIGS: ServerConfig[] = [
     {
         port: 8080,
-        baseUrl: 'http://localhost:8080',
+        baseUrl: getBaseUrl('REACT_APP_SERVER1_URL', 8080),
         wsPort: 8080,
         // ✅ MATCHES: application-server1.properties -> assigned-symbols=AAPL,GOOGL,MSFT,AMZN,TSLA,META,NFLX
         symbols: ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NFLX'],
