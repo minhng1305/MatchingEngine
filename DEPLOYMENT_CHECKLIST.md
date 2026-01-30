@@ -2,7 +2,7 @@
 
 Use this checklist to track your deployment progress.
 
-## Phase 1: Domain & DNS Setup
+## Phase 1: Domain & DNS Setup (DONE)
 - [x] Purchase domain name (Namecheap, Google Domains, etc.)
 - [x] Sign up for Cloudflare (free)
 - [x] Add domain to Cloudflare
@@ -10,13 +10,13 @@ Use this checklist to track your deployment progress.
 - [x] Wait for DNS propagation (5-30 minutes)
 - [x] Verify DNS is working: `dig yourdomain.com`
 
-## Phase 2: Infrastructure Setup
+## Phase 2: Infrastructure Setup (DONE)
 
 ### Database
 - [x] Create Supabase account
 - [x] Create PostgreSQL database
-- [ ] Copy connection string
-- [ ] Test connection locally
+- [x] Copy connection string
+- [x] Test connection locally
 
 ### Kafka
 - [x] Create Confluent Cloud account
@@ -24,22 +24,22 @@ Use this checklist to track your deployment progress.
 - [x] Create topics:
   - [x] `orders` (12 partitions)
   - [x] `orders-dlq` (3 partitions)
-- [ ] Create API keys
-- [ ] Copy bootstrap servers and credentials
+- [x] Create API keys
+- [x] Copy bootstrap servers and credentials
 
 ### Redis
 - [x] Create Redis Cloud account
 - [x] Create Redis database
-- [ ] Copy connection details
+- [x] Copy connection details
 
 ## Phase 3: Backend Deployment
 
 ### Railway Setup
-- [ ] Install Railway CLI: `npm i -g @railway/cli`
-- [ ] Login: `railway login`
-- [ ] Initialize project: `cd backend && railway init`
-- [ ] Link to project: `railway link`
-- [ ] Add PostgreSQL service in Railway dashboard
+- [x] Install Railway CLI: `npm i -g @railway/cli`
+- [x] Login: `railway login`
+- [x] Initialize project: `cd backend && railway init`
+- [x] Link to project: `railway link`
+- [x] Add PostgreSQL service in Railway dashboard
 
 ### Environment Variables
 - [ ] Set `DATABASE_URL`
