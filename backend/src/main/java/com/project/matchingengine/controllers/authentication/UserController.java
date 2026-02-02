@@ -20,7 +20,7 @@ import com.project.matchingengine.models.order.Trade;
 import com.project.matchingengine.repository.authentication.UserRepo;
 import com.project.matchingengine.repository.order.OrderRepo;
 import com.project.matchingengine.repository.order.TradeRepo;
-import com.project.matchingengine.service.authentication.UserDetailsCacheService;
+import com.project.matchingengine.service.user.UserDetailsCacheService;
 
 
 @RestController

@@ -1,4 +1,4 @@
-package com.project.matchingengine.service.authentication;
+package com.project.matchingengine.utils;
 
 /**
  * Lua scripts for atomic Redis operations

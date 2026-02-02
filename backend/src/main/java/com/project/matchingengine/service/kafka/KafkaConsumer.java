@@ -61,7 +61,6 @@ public class KafkaConsumer {
             @Header(value = "kafka_receivedPartitionId", required = false) List<Integer> partitions
     ) {
         try {
-            // Log partition information for monitoring
             if (partitions != null && !partitions.isEmpty()) {
                 Set<Integer> uniquePartitions = new HashSet<>(partitions);
                 logger.info("Processing {} orders from partitions: {}", 

@@ -10,8 +10,7 @@ import com.project.matchingengine.models.order.Order;
 import com.project.matchingengine.service.kafka.KafkaProducer;
 import com.project.matchingengine.repository.order.OrderRepo;
 import com.project.matchingengine.repository.authentication.UserRepo;
-import com.project.matchingengine.service.authentication.UserDetailsCacheService;
-import com.project.matchingengine.models.order.OrderSide;
+import com.project.matchingengine.service.user.UserDetailsCacheService;
 
 import java.util.List;
 import java.util.Optional;

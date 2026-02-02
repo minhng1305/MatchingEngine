@@ -11,12 +11,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.matchingengine.models.order.Order;
 
 
-/*
-    * TODO:
-    * Use single topic: `orders`
-    * Key = `order.getSymbol()` (not orderId)
-    * This ensures symbol-based partitioning
- */
 @Service
 public class KafkaProducer {
     private static final Logger logger = LoggerFactory.getLogger(KafkaProducer.class);

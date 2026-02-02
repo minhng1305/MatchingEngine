@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
-import com.project.matchingengine.service.authentication.CustomedUserDetailsService;
+import com.project.matchingengine.service.user.CustomedUserDetailsService;
 
 
 @Component

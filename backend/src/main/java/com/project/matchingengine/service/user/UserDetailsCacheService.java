@@ -1,31 +1,43 @@
-package com.project.matchingengine.service;
+package com.project.matchingengine.service.user;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import com.project.matchingengine.config.RedisKeys;
+import com.project.matchingengine.utils.RedisLuaScripts;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
 import com.project.matchingengine.models.authentication.Portfolio;
 import com.project.matchingengine.models.authentication.User;
 import com.project.matchingengine.repository.authentication.PortfolioRepo;
 import com.project.matchingengine.repository.authentication.UserRepo;
-import com.project.matchingengine.service.authentication.RedisLuaScripts;
-import com.project.matchingengine.service.authentication.UserDetailsCacheService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
-// TODO: Implement Redis Caching for User Details
+/*
+ * In-memory cache for user balances and portfolios.
+ * This is the only service that accesses the database directly.
+ * Other services should use this service to fetch from the cache instead of directly accessing the database.
+ */
+// TODO: Update such that when cache updates to database, it should maintained a fixed-size trade record in the cache to fetch to frontend for real-time trading
+// TODO: Change this from in-memory cache to Redis cache for better scalability
 @Service
-public class UserDetailsRedisCacheService {
-    private static final Logger logger = LoggerFactory.getLogger(UserDetailsRedisCacheService.class);
+public class UserDetailsCacheService {
+    private static final Logger logger = LoggerFactory.getLogger(UserDetailsCacheService.class);
 
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
@@ -103,7 +115,7 @@ public class UserDetailsRedisCacheService {
     /**
      * Get user balance from Redis (load from DB if not in Redis)
      */
-    public CachedUserDetails getBalance(UUID userId) {
+    public UserDetailsCacheService.CachedUserDetails getBalance(UUID userId) {
         String balanceKey = RedisKeys.userBalance(userId);
 
         // Check Redis first (fast path)
@@ -509,7 +521,4 @@ public class UserDetailsRedisCacheService {
         Set<String> balanceKeys = stringRedisTemplate.keys("me:user:*:balance");
         return balanceKeys != null ? balanceKeys.size() : 0;
     }
-
 }
-
-

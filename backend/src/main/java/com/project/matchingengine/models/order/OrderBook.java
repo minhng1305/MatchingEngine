@@ -12,7 +12,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import com.project.matchingengine.service.authentication.UserDetailsCacheService;
+import com.project.matchingengine.service.user.UserDetailsCacheService;
 
 
 public class OrderBook {

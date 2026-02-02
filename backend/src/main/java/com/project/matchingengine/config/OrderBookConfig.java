@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
 
 import com.project.matchingengine.models.order.OrderBook;
 import com.project.matchingengine.models.order.Stock;
-import com.project.matchingengine.service.authentication.UserDetailsCacheService;
+import com.project.matchingengine.service.user.UserDetailsCacheService;
 
 
 @Configuration

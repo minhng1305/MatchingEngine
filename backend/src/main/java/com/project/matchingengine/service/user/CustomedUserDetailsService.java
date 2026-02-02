@@ -1,4 +1,4 @@
-package com.project.matchingengine.service.authentication;
+package com.project.matchingengine.service.user;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
