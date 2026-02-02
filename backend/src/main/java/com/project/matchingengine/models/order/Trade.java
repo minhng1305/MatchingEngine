@@ -28,11 +28,17 @@ public class Trade implements Serializable {
     @Column(nullable = false)
     private int quantity;
 
-    @Column(name = "buyOrderId", nullable = false)
+    @Column(name = "buy_order_id", nullable = false)
     private UUID buyOrderId;
 
-    @Column(name = "sellOrderId", nullable = false)
+    @Column(name = "sell_order_id", nullable = false)
     private UUID sellOrderId;
+
+    @Column(name = "buy_user_id", nullable = false)
+    private UUID buyUserId;
+
+    @Column(name = "sell_user_id", nullable = false)
+    private UUID sellUserId;
 
     @Column(name = "trade_timestamp", nullable = false)
     private Timestamp tradeTimestamp;
@@ -47,6 +53,8 @@ public class Trade implements Serializable {
                  int quantity,
                  UUID buyOrderId,
                  UUID sellOrderId,
+                 UUID buyUserId,
+                 UUID sellUserId,
                  Timestamp tradeTimestamp) {
         this.tradeId = tradeId;
         this.symbol = symbol;
@@ -54,6 +62,8 @@ public class Trade implements Serializable {
         this.quantity = quantity;
         this.buyOrderId = buyOrderId;
         this.sellOrderId = sellOrderId;
+        this.buyUserId = buyUserId;
+        this.sellUserId = sellUserId;
         this.tradeTimestamp = tradeTimestamp;
     }
 
@@ -91,6 +101,14 @@ public class Trade implements Serializable {
 
     public UUID getSellOrderId() {
         return sellOrderId;
+    }
+
+    public UUID getBuyerUserId() {
+        return buyUserId;
+    }
+
+    public UUID getSellerUserId() {
+        return sellUserId;
     }
 
     public Timestamp getTradeTimestamp() {

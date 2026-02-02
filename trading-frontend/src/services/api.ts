@@ -1,10 +1,12 @@
-import { Stock, Order, Trade, OrderBookSummary, LoginCredentials, AuthResponse } from '../types';
+import { Stock, Order, Trade, OrderBookSummary, OrderBookSummaryApiResponse, LoginCredentials, AuthResponse } from '../types';
 import { getServerForSymbol, getAllServerUrls } from './serverRouter';
 
 class ApiService {
     private token: string | null = null;
 
-    private defaultBaseUrl = 'http://localhost:8080/api';
+    // Use environment variables with fallback to localhost for development
+    private defaultBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api';
+    private ingressBaseUrl = process.env.REACT_APP_INGRESS_BASE_URL || 'http://localhost:8085/api';
 
     setToken(token: string) {
         this.token = token;
@@ -51,6 +53,26 @@ class ApiService {
     // ✅ EXISTING METHOD: For non-symbol-specific requests
     private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
         const url = `${this.defaultBaseUrl}${endpoint}`;
+
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                ...this.getHeaders(),
+                ...options.headers,
+            },
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ message: 'Network error' }));
+            throw new Error(error.message || `HTTP error! status: ${response.status}`);
+        }
+
+        return response.json();
+    }
+
+    // ✅ NEW METHOD: For requests to ingress server (order submission)
+    private async requestToIngress<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+        const url = `${this.ingressBaseUrl}${endpoint}`;
 
         const response = await fetch(url, {
             ...options,
@@ -131,8 +153,8 @@ class ApiService {
     }
 
     // ✅ CHANGED: Now routes to correct server based on symbol
-    async getStockDetail(symbol: string): Promise<OrderBookSummary> {
-        return this.requestWithSymbol<OrderBookSummary>(symbol, `/stocks/${symbol}`);
+    async getStockDetail(symbol: string): Promise<OrderBookSummaryApiResponse> {
+        return this.requestWithSymbol<OrderBookSummaryApiResponse>(symbol, `/stocks/${symbol}`);
     }
 
     // ✅ CHANGED: Now routes to correct server based on symbol
@@ -144,10 +166,10 @@ class ApiService {
     // Orders (symbol-specific)
     // ========================================
 
-    // ✅ CHANGED: Now routes to correct server based on order.symbol
+    // ✅ CHANGED: Routes ALL orders to ingress server (8085) which sends to Kafka
     async submitOrder(order: Order): Promise<{ success: boolean; orderId: string; message: string }> {
-        console.log(`[API] 📤 Submitting ${order.side} order for ${order.symbol} (qty: ${order.quantity}, price: ${order.price})`);
-        return this.requestWithSymbol(order.symbol, '/orders/submit', {
+        console.log(`[API] 📤 Submitting ${order.side} order for ${order.symbol} (qty: ${order.quantity}, price: ${order.price}) via ingress server`);
+        return this.requestToIngress('/orders/submit', {
             method: 'POST',
             body: JSON.stringify(order),
         });
@@ -182,7 +204,12 @@ class ApiService {
     // ========================================
 
     async getUserProfile(): Promise<{
-        user: { userId: string; username: string; email: string };
+        user: { userId: string; username: string; email: string; ledgerBalance?: number; availableBalance?: number };
+        account?: {
+            ledgerBalance: number;
+            availableBalance: number;
+            holdings: Record<string, number>;
+        };
         statistics: {
             totalOrders: number;
             pendingOrders: number;
@@ -204,7 +231,14 @@ class ApiService {
         return this.request<Trade[]>('/user/trades');
     }
 
-    async getUserInfo(): Promise<{ userId: string; username: string; email: string }> {
+    async getUserInfo(): Promise<{ 
+        userId: string; 
+        username: string; 
+        email: string; 
+        ledgerBalance: number; 
+        availableBalance: number; 
+        holdings: Record<string, number> 
+    }> {
         return this.request('/user/info');
     }
 }

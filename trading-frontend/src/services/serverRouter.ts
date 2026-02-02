@@ -2,11 +2,18 @@
  * Server Router for Multi-Server Matching Engine
  *
  * This service maps stock symbols to their corresponding backend servers.
- * Each server processes specific symbols as configured in backend application.properties:
+ * Each server processes specific symbols as configured in backend application.properties.
  *
- * Server 1 (8080): AAPL, GOOGL, TSLA, NVDA, IBM, ORCL, CRM
- * Server 2 (8081): MSFT, AMZN, AMD, INTC, CSCO, SAP, TWTR
- * Server 3 (8082): META, NFLX, SNAP, BABA, TCEHY, ADOBE
+ * ARCHITECTURE:
+ * - Order Submission: ALL orders go to Ingress Server (8085) → Kafka → Matching Servers
+ * - Read Operations: Symbol-based routing to matching servers (8080/8081/8082)
+ *   Each server maintains OrderBooks for symbols it processes
+ *
+ * CURRENT SETUP: Single server (8080) handling all symbols
+ * Server 1 (8080): AAPL, GOOGL, MSFT, AMZN, TSLA, META, NFLX
+ * 
+ * NOTE: If you want to use multiple servers, update this configuration to match
+ * your backend setup and ensure all servers are running on their respective ports.
  */
 
 export interface ServerConfig {
@@ -20,35 +27,48 @@ export interface ServerConfig {
 /**
  * Server configurations matching your backend setup
  * IMPORTANT: Keep this in sync with your application-server*.properties files
+ * 
+ * CURRENT CONFIGURATION: All symbols on port 8080
+ * To use multiple servers, uncomment the other server configs and update symbols accordingly
  */
+// Get base URL from environment variable, fallback to localhost for development
+const getBaseUrl = (envVar: string, defaultPort: number): string => {
+    const envUrl = process.env[envVar];
+    if (envUrl) return envUrl;
+    return `http://localhost:${defaultPort}`;
+};
+
 export const SERVER_CONFIGS: ServerConfig[] = [
     {
         port: 8080,
-        baseUrl: 'http://localhost:8080',
+        baseUrl: getBaseUrl('REACT_APP_SERVER1_URL', 8080),
         wsPort: 8080,
-        // ⚠️ MUST match: application-server1.properties -> assigned-symbols
-        symbols: ['AAPL', 'GOOGL', 'TSLA', 'NVDA', 'IBM', 'ORCL', 'CRM'],
-        kafkaTopics: ['order-aapl', 'order-googl', 'order-tsla', 'order-nvda',
-            'order-ibm', 'order-orcl', 'order-crm']
-    },
+        // ✅ MATCHES: application-server1.properties -> assigned-symbols=AAPL,GOOGL,MSFT,AMZN,TSLA,META,NFLX
+        symbols: ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NFLX'],
+        kafkaTopics: ['order-aapl', 'order-googl', 'order-msft', 'order-amzn',
+            'order-tsla', 'order-meta', 'order-nflx']
+    }
+    // Uncomment below if you're running multiple servers:
+    /*
     {
         port: 8081,
         baseUrl: 'http://localhost:8081',
         wsPort: 8081,
         // ⚠️ MUST match: application-server2.properties -> assigned-symbols
-        symbols: ['MSFT', 'AMZN', 'AMD', 'INTC', 'CSCO', 'SAP', 'TWTR'],
-        kafkaTopics: ['order-msft', 'order-amzn', 'order-amd', 'order-intc',
-            'order-cisco', 'order-sap', 'order-twtr']
+        symbols: ['NVDA', 'AMD', 'INTC', 'IBM', 'ORCL', 'CSCO', 'SAP'],
+        kafkaTopics: ['order-nvda', 'order-amd', 'order-intc', 'order-ibm',
+            'order-orcl', 'order-csco', 'order-sap']
     },
     {
         port: 8082,
         baseUrl: 'http://localhost:8082',
         wsPort: 8082,
         // ⚠️ MUST match: application-server3.properties -> assigned-symbols
-        symbols: ['META', 'NFLX', 'SNAP', 'BABA', 'TCEHY', 'ADOBE'],
-        kafkaTopics: ['order-meta', 'order-nflx', 'order-snap', 'order-baba',
-            'order-tcehy', 'order-adobe']
+        symbols: ['SNAP', 'BABA', 'TCEHY', 'ADOBE', 'CRM', 'TWTR'],
+        kafkaTopics: ['order-snap', 'order-baba', 'order-tcehy', 'order-adobe',
+            'order-crm', 'order-twtr']
     }
+    */
 ];
 
 class ServerRouter {

@@ -1,21 +1,16 @@
 package com.project.matchingengine.service.orderbook;
 
-import com.project.matchingengine.models.order.Stock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.Payload;
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
-
 
 import com.project.matchingengine.models.order.Order;
 import com.project.matchingengine.service.kafka.KafkaProducer;
 import com.project.matchingengine.repository.order.OrderRepo;
-import com.project.matchingengine.models.order.OrderStatus;
-import com.project.matchingengine.models.order.OrderType;
+import com.project.matchingengine.repository.authentication.UserRepo;
+import com.project.matchingengine.service.user.UserDetailsCacheService;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,27 +21,38 @@ import java.util.UUID;
 public class OrderService {
     private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
     private final KafkaProducer kafkaProducer;
-    private OrderRepo orderRepo;
+    private final UserDetailsCacheService userDetailsCacheService;
+
+    // TODO: Remove repos once caching is fully implemented
+    private final OrderRepo orderRepo;
+    private final UserRepo userRepo;
 
     @Autowired
-    public OrderService(KafkaProducer kafkaProducer, OrderRepo orderRepo)
+    public OrderService(KafkaProducer kafkaProducer,
+                        OrderRepo orderRepo,
+                        UserRepo userRepo,
+                        UserDetailsCacheService userDetailsCacheService)
     {
         this.kafkaProducer = kafkaProducer;
         this.orderRepo = orderRepo;
+        this.userRepo = userRepo;
+        this.userDetailsCacheService = userDetailsCacheService;
     }
 
+    // TODO: Verify this endpoint logic
     public void submitOrder(@Payload Order order)
     {
+//        if (order.getSide() == OrderSide.BUY) {
+//            userDetailsCacheService.placeOrder(order.getUserId(), order.getSymbol(), order.getCurrentQuantity(), order.getPrice(), true);
+//        }
+//        else if (order.getSide() == OrderSide.SELL) {
+//            userDetailsCacheService.placeOrder(order.getUserId(), order.getSymbol(), order.getCurrentQuantity(), order.getPrice(), false);
+//        }
         kafkaProducer.sendOrder(order);
-        saveOrder(order);
+        logger.info("Order {} submitted for user {}. Funds held if BUY.", order.getOrderId(), order.getUserId());
     }
 
-    public void saveOrder(Order order)
-    {
-        orderRepo.save(order);
-        logger.info("Order: {} - Saved", order.getOrderId());
-    }
-
+    // TODO: Update such that it pulled data from cache rather than DB
     public Order getOrderById(UUID orderId)
     {
         Optional<Order> optionalOrder = orderRepo.findById(orderId);
@@ -57,31 +63,22 @@ public class OrderService {
         return null;
     }
 
+    // TODO: Update such that it pulled data from cache rather than DB
     public List<Order> getAllOrders()
     {
         return orderRepo.findAll();
     }
 
-    // TODO: Fetch orders by symbol logic
+    // TODO: Update such that it pulled data from cache rather than DB
     public List<Order> getOrdersBySymbol(String symbol)
     {
         return null;
     }
 
+    // TODO: Update such that it pulled data from cache rather than DB
     public void updateOrder(Order order)
     {
         orderRepo.save(order);
         logger.info("Order: {} - Updated successfully", order.getOrderId());
-    }
-
-    /* TODO: Remove order logic
-        1. If order is in PENDING status, remove it from the order book and set its status to CANCELLED.
-        2. If order is in PARTIALLY_FILLED status, remove it from the order book and set its status to CANCELLED.
-        3. If order is in FILLED or CANCELLED status, do nothing.
-     */
-    public void removeOrder(UUID orderId)
-    {
-
-        logger.info("Order: {} - Removed", orderId);
     }
 }

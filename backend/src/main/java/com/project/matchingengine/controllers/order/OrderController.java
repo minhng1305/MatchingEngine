@@ -103,20 +103,4 @@ public class OrderController {
             ));
         }
     }
-
-    @DeleteMapping("/{orderId}")
-    public ResponseEntity<?> deleteOrder(@PathVariable String orderId) {
-        try {
-            orderService.removeOrder(UUID.fromString(orderId));
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Order cancelled successfully"
-            ));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", e.getMessage()
-            ));
-        }
-    }
 }

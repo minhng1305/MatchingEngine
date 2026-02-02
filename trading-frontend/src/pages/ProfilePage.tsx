@@ -9,6 +9,13 @@ interface UserProfile {
         userId: string;
         username: string;
         email: string;
+        ledgerBalance?: number;
+        availableBalance?: number;
+    };
+    account?: {
+        ledgerBalance: number;
+        availableBalance: number;
+        holdings: Record<string, number>;
     };
     statistics: {
         totalOrders: number;
@@ -122,6 +129,33 @@ const ProfilePage: React.FC = () => {
                 </div>
             </div>
 
+            {/* Account Balance Cards - Always Visible */}
+            <div style={styles.accountSection}>
+                <h2 style={styles.accountSectionTitle}>Account Balance</h2>
+                <div style={styles.statsGrid}>
+                    <div style={styles.accountCard}>
+                        <h3 style={styles.accountValue}>
+                            {formatCurrency(
+                                profile.account?.ledgerBalance ?? 
+                                profile.user.ledgerBalance ?? 
+                                0
+                            )}
+                        </h3>
+                        <p style={styles.statLabel}>Ledger Balance</p>
+                    </div>
+                    <div style={styles.accountCard}>
+                        <h3 style={styles.accountValue}>
+                            {formatCurrency(
+                                profile.account?.availableBalance ?? 
+                                profile.user.availableBalance ?? 
+                                0
+                            )}
+                        </h3>
+                        <p style={styles.statLabel}>Available Balance</p>
+                    </div>
+                </div>
+            </div>
+
             {/* Statistics Cards */}
             <div style={styles.statsGrid}>
                 <div style={styles.statCard}>
@@ -181,8 +215,36 @@ const ProfilePage: React.FC = () => {
                 <div style={styles.tabContent}>
                     {activeTab === 'overview' && (
                         <div style={styles.overview}>
+                            {/* Stock Holdings - Always Show */}
                             <div style={styles.section}>
-                                <h3 style={styles.sectionTitle}>Account Summary</h3>
+                                <h3 style={styles.sectionTitle}>Stock Holdings</h3>
+                                {profile.account?.holdings && Object.keys(profile.account.holdings).length > 0 ? (
+                                    <div style={styles.tableContainer}>
+                                        <table style={styles.table}>
+                                            <thead>
+                                            <tr style={styles.tableHeader}>
+                                                <th style={styles.th}>Symbol</th>
+                                                <th style={styles.th}>Quantity</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            {Object.entries(profile.account.holdings).map(([symbol, quantity]) => (
+                                                <tr key={symbol} style={styles.tableRow}>
+                                                    <td style={styles.td}>{symbol}</td>
+                                                    <td style={styles.td}>{quantity}</td>
+                                                </tr>
+                                            ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div style={styles.emptyState}>No stock holdings</div>
+                                )}
+                            </div>
+
+                            {/* Trading Statistics */}
+                            <div style={styles.section}>
+                                <h3 style={styles.sectionTitle}>Trading Statistics</h3>
                                 <div style={styles.summaryGrid}>
                                     <div style={styles.summaryItem}>
                                         <span>Success Rate:</span>
@@ -351,6 +413,33 @@ const styles = {
         fontSize: '0.875rem',
         margin: 0,
     },
+    accountSection: {
+        backgroundColor: '#f0f9ff',
+        padding: '1.5rem',
+        borderRadius: '0.5rem',
+        border: '2px solid #3b82f6',
+        marginBottom: '2rem',
+    },
+    accountSectionTitle: {
+        fontSize: '1.25rem',
+        fontWeight: 'bold',
+        color: '#1f2937',
+        margin: '0 0 1rem 0',
+    },
+    accountCard: {
+        backgroundColor: 'white',
+        padding: '1.5rem',
+        borderRadius: '0.5rem',
+        border: '1px solid #3b82f6',
+        textAlign: 'center' as const,
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+    },
+    accountValue: {
+        fontSize: '2.5rem',
+        fontWeight: 'bold',
+        color: '#3b82f6',
+        margin: '0 0 0.5rem 0',
+    },
     statsGrid: {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -436,6 +525,10 @@ const styles = {
     successRate: {
         fontWeight: 'bold',
         color: '#10b981',
+    },
+    balanceValue: {
+        fontWeight: 'bold',
+        color: '#3b82f6',
     },
     tableContainer: {
         overflowX: 'auto' as const,

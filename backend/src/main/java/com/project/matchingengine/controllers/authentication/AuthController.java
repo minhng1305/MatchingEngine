@@ -72,7 +72,9 @@ public class AuthController
             response.put("user", Map.of(
                     "userId", user.getUserId().toString(),
                     "username", user.getUsername(),
-                    "email", user.getEmail()
+                    "email", user.getEmail(),
+                    "ledgerBalance", user.getLedgerBalance(),
+                    "availableBalance", user.getAvailableBalance()
             ));
 
             return ResponseEntity.ok(response);
@@ -109,7 +111,9 @@ public class AuthController
             response.put("user", Map.of(
                     "userId", user.getUserId().toString(),
                     "username", user.getUsername(),
-                    "email", user.getEmail()
+                    "email", user.getEmail(),
+                    "ledgerBalance", user.getLedgerBalance(),
+                    "availableBalance", user.getAvailableBalance()
             ));
 
             return ResponseEntity.ok(response);

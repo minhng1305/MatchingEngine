@@ -13,7 +13,7 @@ public class Order implements java.io.Serializable {
     private static final long serialVersionUID = 1L;
 
     @Id
-//    @GeneratedValue(strategy = GenerationType.UUID)
+    //@GeneratedValue(strategy = GenerationType.UUID)
     private UUID orderId;
 
     @Column(name = "user_id", nullable = false)

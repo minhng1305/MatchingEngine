@@ -41,6 +41,21 @@ export interface OrderBookSummary {
     recentTrades: Trade[];
 }
 
+// API response type - backend may return different property names
+export interface OrderBookSummaryApiResponse {
+    symbol: string;
+    topBuyOrders?: Order[];  // Backend returns this
+    topBuys?: Order[];       // Alternative name
+    topSellOrders?: Order[]; // Backend returns this
+    lowestSells?: Order[];   // Alternative name
+    currentPrice: number;
+    bestBidPrice: number;
+    bestBidQuantity: number;
+    bestAskPrice: number;
+    bestAskQuantity: number;
+    recentTrades: Trade[];
+}
+
 export enum OrderStatus {
     PENDING = 'PENDING',
     FILLED = 'FILLED',

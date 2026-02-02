@@ -9,28 +9,29 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.project.matchingengine.service.orderbook.OrderBook;
-import com.project.matchingengine.service.orderbook.OrderService;
-import com.project.matchingengine.service.orderbook.TradeService;
+import com.project.matchingengine.models.order.OrderBook;
 import com.project.matchingengine.models.order.Stock;
+import com.project.matchingengine.service.user.UserDetailsCacheService;
 
 
 @Configuration
 public class OrderBookConfig {
     private static final Logger logger = LoggerFactory.getLogger(OrderBookConfig.class);
     private Map<String, OrderBook> orderBooks;
-    private final OrderService orderService;
-    private final TradeService tradeService;
+    private final UserDetailsCacheService userDetailsCacheService;
     private final String[] symbols = Arrays.stream(Stock.values())
                                             .map(Enum::name)
                                             .toArray(String[]::new);
 
-    public OrderBookConfig(OrderService orderService, TradeService tradeService) {
-        this.orderService = orderService;
-        this.tradeService = tradeService;
+    public OrderBookConfig(UserDetailsCacheService userDetailsCacheService)
+    {
         this.orderBooks = new HashMap<>();
+        this.userDetailsCacheService = userDetailsCacheService;
         for (String symbol : symbols) {
-            orderBooks.put(symbol, new OrderBook(symbol, orderService, tradeService));
+            orderBooks.put(symbol, new OrderBook(
+                    symbol,
+                    userDetailsCacheService
+            ));
         }
     }
 

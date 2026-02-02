@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Order } from '../types';
 
 interface OrderBookProps {
@@ -9,151 +9,301 @@ interface OrderBookProps {
 }
 
 const OrderBook: React.FC<OrderBookProps> = ({
-                                                 topBuys,
-                                                 lowestSells,
-                                                 bestBidPrice,
-                                                 bestAskPrice
-                                             }) => {
-    // ✅ FIXED: Safe array handling with defaults
+    topBuys,
+    lowestSells,
+    bestBidPrice,
+    bestAskPrice
+}) => {
     const safeBuyOrders = topBuys || [];
     const safeSellOrders = lowestSells || [];
     const safeBidPrice = bestBidPrice || 0;
     const safeAskPrice = bestAskPrice || 0;
+    const spread = safeAskPrice > 0 && safeBidPrice > 0 ? safeAskPrice - safeBidPrice : 0;
+    const spreadPercent = safeBidPrice > 0 ? (spread / safeBidPrice) * 100 : 0;
+
+    // Reverse sells to show highest asks first (top of list)
+    const displaySells = [...safeSellOrders].reverse();
+    const displayBuys = safeBuyOrders;
+
+    // Calculate max quantity for visual depth bars
+    const allQuantities = [
+        ...displaySells.map(o => o.quantity || o.currentQuantity || 0),
+        ...displayBuys.map(o => o.quantity || o.currentQuantity || 0)
+    ];
+    const maxQuantity = Math.max(...allQuantities, 1);
 
     return (
         <div style={styles.container}>
-            <h3 style={styles.title}>Order Book</h3>
-
-            <div style={styles.spread}>
-                <div style={styles.spreadItem}>
-                    <span style={styles.spreadLabel}>Best Bid:</span>
-                    <span style={{...styles.spreadPrice, color: '#10b981'}}>
-            ${safeBidPrice.toFixed(2)}
-          </span>
-                </div>
-                <div style={styles.spreadItem}>
-                    <span style={styles.spreadLabel}>Best Ask:</span>
-                    <span style={{...styles.spreadPrice, color: '#ef4444'}}>
-            ${safeAskPrice.toFixed(2)}
-          </span>
+            <div style={styles.header}>
+                <h3 style={styles.title}>Order Book</h3>
+                <div style={styles.spreadContainer}>
+                    <span style={styles.spreadLabel}>Spread:</span>
+                    <span style={styles.spreadValue}>${spread.toFixed(2)}</span>
+                    <span style={styles.spreadPercent}>({spreadPercent.toFixed(2)}%)</span>
                 </div>
             </div>
 
+            <div style={styles.tableHeader}>
+                <div style={styles.headerCell}>Price</div>
+                <div style={styles.headerCell}>Quantity</div>
+                <div style={styles.headerCell}>Total</div>
+            </div>
+
             <div style={styles.bookContainer}>
-                {/* Sell Orders (Asks) */}
-                <div style={styles.bookSide}>
-                    <h4 style={{...styles.sideTitle, color: '#ef4444'}}>Sell Orders</h4>
-                    <div style={styles.orderList}>
-                        {/* FIXED: Now uses safeSellOrders.slice() */}
-                        {safeSellOrders.slice(0, 5).map((order, index) => (
-                            <div key={index} style={{...styles.orderRow, borderLeft: '3px solid #ef4444'}}>
-                                <span style={styles.price}>${order.price.toFixed(2)}</span>
-                                <span style={styles.quantity}>{order.quantity || order.currentQuantity || 0}</span>
-                            </div>
-                        ))}
-                        {safeSellOrders.length === 0 && (
-                            <div style={styles.noOrders}>No sell orders</div>
-                        )}
+                {/* ASKS (Sell Orders) - Top, Red */}
+                <div style={styles.asksSection}>
+                    {displaySells.length > 0 ? (
+                        displaySells.map((order, index) => {
+                            const qty = order.quantity || order.currentQuantity || 0;
+                            const total = order.price * qty;
+                            const depthPercent = (qty / maxQuantity) * 100;
+                            
+                            return (
+                                <div
+                                    key={`ask-${index}`}
+                                    style={styles.orderRow}
+                                    className="order-row-ask"
+                                >
+                                    <div 
+                                        style={{
+                                            ...styles.depthBar,
+                                            backgroundColor: '#ef4444',
+                                            width: `${depthPercent}%`,
+                                        }} 
+                                        className="depth-bar-ask" 
+                                    />
+                                    <div style={{...styles.priceCell, color: '#ef4444'}}>
+                                        ${order.price.toFixed(2)}
+                                    </div>
+                                    <div style={styles.quantityCell}>{qty.toLocaleString()}</div>
+                                    <div style={styles.totalCell}>${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <div style={styles.emptyState}>No sell orders</div>
+                    )}
+                </div>
+
+                {/* SPREAD INDICATOR */}
+                <div style={styles.spreadRow}>
+                    <div style={styles.spreadContent}>
+                        <div style={styles.spreadPrice}>
+                            <span style={styles.bidPrice}>${safeBidPrice.toFixed(2)}</span>
+                            <span style={styles.spreadSeparator}> ↔ </span>
+                            <span style={styles.askPrice}>${safeAskPrice.toFixed(2)}</span>
+                        </div>
+                        <div style={styles.spreadInfo}>
+                            Spread: ${spread.toFixed(2)} ({spreadPercent.toFixed(2)}%)
+                        </div>
                     </div>
                 </div>
 
-                {/* Buy Orders (Bids) */}
-                <div style={styles.bookSide}>
-                    <h4 style={{...styles.sideTitle, color: '#10b981'}}>Buy Orders</h4>
-                    <div style={styles.orderList}>
-                        {/* ✅ FIXED: Now uses safeBuyOrders.slice() */}
-                        {safeBuyOrders.slice(0, 5).map((order, index) => (
-                            <div key={index} style={{...styles.orderRow, borderLeft: '3px solid #10b981'}}>
-                                <span style={styles.price}>${order.price.toFixed(2)}</span>
-                                <span style={styles.quantity}>{order.quantity || order.currentQuantity || 0}</span>
-                            </div>
-                        ))}
-                        {safeBuyOrders.length === 0 && (
-                            <div style={styles.noOrders}>No buy orders</div>
-                        )}
-                    </div>
+                {/* BIDS (Buy Orders) - Bottom, Green */}
+                <div style={styles.bidsSection}>
+                    {displayBuys.length > 0 ? (
+                        displayBuys.map((order, index) => {
+                            const qty = order.quantity || order.currentQuantity || 0;
+                            const total = order.price * qty;
+                            const depthPercent = (qty / maxQuantity) * 100;
+                            
+                            return (
+                                <div
+                                    key={`bid-${index}`}
+                                    style={styles.orderRow}
+                                    className="order-row-bid"
+                                >
+                                    <div 
+                                        style={{
+                                            ...styles.depthBar,
+                                            backgroundColor: '#10b981',
+                                            width: `${depthPercent}%`,
+                                        }} 
+                                        className="depth-bar-bid" 
+                                    />
+                                    <div style={{...styles.priceCell, color: '#10b981'}}>
+                                        ${order.price.toFixed(2)}
+                                    </div>
+                                    <div style={styles.quantityCell}>{qty.toLocaleString()}</div>
+                                    <div style={styles.totalCell}>${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <div style={styles.emptyState}>No buy orders</div>
+                    )}
                 </div>
             </div>
         </div>
     );
 };
 
-const styles = {
+const styles: { [key: string]: React.CSSProperties } = {
     container: {
-        backgroundColor: 'white',
-        border: '1px solid #e5e7eb',
-        borderRadius: '0.5rem',
+        backgroundColor: '#1e293b',
+        border: '1px solid #334155',
+        borderRadius: '0.75rem',
         padding: '1.5rem',
-        marginBottom: '1.5rem',
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
     },
-    title: {
-        fontSize: '1.125rem',
-        fontWeight: 'bold',
-        marginBottom: '1rem',
-        color: '#1f2937',
-    },
-    spread: {
+    header: {
         display: 'flex',
         justifyContent: 'space-between',
-        padding: '1rem',
-        backgroundColor: '#f9fafb',
-        borderRadius: '0.25rem',
-        marginBottom: '1rem',
-    },
-    spreadItem: {
-        display: 'flex',
-        flexDirection: 'column' as const,
         alignItems: 'center',
+        marginBottom: '1rem',
+        paddingBottom: '0.75rem',
+        borderBottom: '2px solid #334155',
+    },
+    title: {
+        fontSize: '1.25rem',
+        fontWeight: '700',
+        color: '#e2e8f0',
+        margin: 0,
+    },
+    spreadContainer: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        fontSize: '0.875rem',
     },
     spreadLabel: {
+        color: '#94a3b8',
+        fontWeight: '500',
+    },
+    spreadValue: {
+        color: '#e2e8f0',
+        fontWeight: '600',
+    },
+    spreadPercent: {
+        color: '#94a3b8',
+    },
+    tableHeader: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr 1fr',
+        gap: '0.5rem',
+        padding: '0.5rem 0',
+        borderBottom: '1px solid #334155',
         fontSize: '0.75rem',
-        color: '#6b7280',
-        marginBottom: '0.25rem',
+        fontWeight: '600',
+        color: '#94a3b8',
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+    },
+    headerCell: {
+        textAlign: 'right',
+    },
+    bookContainer: {
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+    },
+    asksSection: {
+        display: 'flex',
+        flexDirection: 'column',
+        maxHeight: '45%',
+        overflowY: 'auto',
+    },
+    bidsSection: {
+        display: 'flex',
+        flexDirection: 'column',
+        maxHeight: '45%',
+        overflowY: 'auto',
+    },
+    orderRow: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr 1fr',
+        gap: '0.5rem',
+        padding: '0.5rem 0',
+        position: 'relative',
+        fontSize: '0.875rem',
+        transition: 'background-color 0.15s ease',
+        cursor: 'pointer',
+    },
+    depthBar: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        bottom: 0,
+        height: '100%',
+        opacity: 0.15,
+        zIndex: 0,
+    },
+    priceCell: {
+        fontWeight: '600',
+        textAlign: 'right',
+        position: 'relative',
+        zIndex: 1,
+    },
+    quantityCell: {
+        textAlign: 'right',
+        color: '#cbd5e1',
+        position: 'relative',
+        zIndex: 1,
+    },
+    totalCell: {
+        textAlign: 'right',
+        color: '#94a3b8',
+        position: 'relative',
+        zIndex: 1,
+    },
+    spreadRow: {
+        padding: '0.75rem 0',
+        borderTop: '2px solid #334155',
+        borderBottom: '2px solid #334155',
+        backgroundColor: '#0f172a',
+        margin: '0.5rem 0',
+    },
+    spreadContent: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '0.25rem',
     },
     spreadPrice: {
         fontSize: '1rem',
-        fontWeight: 'bold',
+        fontWeight: '700',
+        color: '#e2e8f0',
     },
-    bookContainer: {
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '1rem',
+    bidPrice: {
+        color: '#10b981',
     },
-    bookSide: {
-        minHeight: '200px',
+    askPrice: {
+        color: '#ef4444',
     },
-    sideTitle: {
+    spreadSeparator: {
+        color: '#94a3b8',
+        margin: '0 0.5rem',
+    },
+    spreadInfo: {
+        fontSize: '0.75rem',
+        color: '#94a3b8',
+    },
+    emptyState: {
+        textAlign: 'center',
+        color: '#64748b',
         fontSize: '0.875rem',
-        fontWeight: '600',
-        marginBottom: '0.5rem',
-        textAlign: 'center' as const,
-    },
-    orderList: {
-        display: 'flex',
-        flexDirection: 'column' as const,
-        gap: '0.25rem',
-    },
-    orderRow: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        padding: '0.5rem',
-        backgroundColor: '#f9fafb',
-        borderRadius: '0.25rem',
-        fontSize: '0.875rem',
-    },
-    price: {
-        fontWeight: '500',
-    },
-    quantity: {
-        color: '#6b7280',
-    },
-    noOrders: {
-        textAlign: 'center' as const,
-        color: '#9ca3af',
-        fontSize: '0.875rem',
-        padding: '1rem',
+        padding: '2rem',
         fontStyle: 'italic',
     },
 };
+
+// Add CSS for depth bars and hover effects
+const styleSheet = document.createElement('style');
+styleSheet.textContent = `
+    .order-row-ask:hover {
+        background-color: rgba(239, 68, 68, 0.1);
+    }
+    .order-row-bid:hover {
+        background-color: rgba(16, 185, 129, 0.1);
+    }
+`;
+if (!document.getElementById('orderbook-styles')) {
+    styleSheet.id = 'orderbook-styles';
+    document.head.appendChild(styleSheet);
+}
 
 export default OrderBook;

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { OrderBookSummary, Order } from '../types';
+import { OrderBookSummary, OrderBookSummaryApiResponse, Order } from '../types';
 import { apiService } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
 import OrderForm from '../components/OrderForm';
 import OrderBook from '../components/OrderBook';
-import TradesList from '../components/TradesList';
+import TradeHistory from '../components/TradeHistory';
+import PriceChart from '../components/PriceChart';
+import UserOpenOrders from '../components/UserOpenOrders';
 
 const StockDetailPage: React.FC = () => {
     const { symbol } = useParams<{ symbol: string }>();
@@ -15,6 +17,7 @@ const StockDetailPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [orderSuccess, setOrderSuccess] = useState('');
+    const [activeTab, setActiveTab] = useState<'trades' | 'orders'>('trades');
 
     const { subscribeToOrderBook, subscribeToTrades } = useWebSocket();
 
@@ -46,7 +49,7 @@ const StockDetailPage: React.FC = () => {
                     console.log('Received trade update:', tradeData);
                     setStockData(prev => prev ? {
                         ...prev,
-                        recentTrades: [tradeData, ...(prev.recentTrades || [])].slice(0, 10)
+                        recentTrades: [tradeData, ...(prev.recentTrades || [])].slice(0, 50)
                     } : null);
                 });
             } catch (err) {
@@ -60,20 +63,29 @@ const StockDetailPage: React.FC = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [symbol]);
 
+    // Poll for updates every 3 seconds as fallback
+    useEffect(() => {
+        if (!symbol) return;
+
+        const interval = setInterval(() => {
+            loadStockDetail();
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [symbol]);
+
     const loadStockDetail = async () => {
         if (!symbol) return;
 
         try {
-            setLoading(true);
             setError('');
-            console.log('Loading stock detail for:', symbol);
-            const data = await apiService.getStockDetail(symbol);
-            console.log('Loaded stock data:', data);
+            const data: OrderBookSummaryApiResponse = await apiService.getStockDetail(symbol);
 
+            // Map API response to internal OrderBookSummary format
             const safeData: OrderBookSummary = {
                 symbol: data.symbol || symbol,
-                topBuys: data.topBuys || [],
-                lowestSells: data.lowestSells || [],
+                topBuys: data.topBuyOrders || data.topBuys || [],
+                lowestSells: data.topSellOrders || data.lowestSells || [],
                 currentPrice: data.currentPrice || 0,
                 bestBidPrice: data.bestBidPrice || 0,
                 bestBidQuantity: data.bestBidQuantity || 0,
@@ -83,10 +95,10 @@ const StockDetailPage: React.FC = () => {
             };
 
             setStockData(safeData);
+            setLoading(false);
         } catch (err) {
             console.error('Error loading stock detail:', err);
             setError(err instanceof Error ? err.message : 'Failed to load stock details');
-        } finally {
             setLoading(false);
         }
     };
@@ -108,7 +120,7 @@ const StockDetailPage: React.FC = () => {
         navigate('/');
     };
 
-    if (loading) {
+    if (loading && !stockData) {
         return (
             <div style={styles.loading}>
                 <div style={styles.spinner}></div>
@@ -117,7 +129,7 @@ const StockDetailPage: React.FC = () => {
         );
     }
 
-    if (error) {
+    if (error && !stockData) {
         return (
             <div style={styles.error}>
                 <h2>Error Loading Stock</h2>
@@ -146,6 +158,7 @@ const StockDetailPage: React.FC = () => {
 
     return (
         <div style={styles.container}>
+            {/* Header */}
             <div style={styles.header}>
                 <button style={styles.backButton} onClick={handleBackClick}>
                     ← Back to Stocks
@@ -153,18 +166,28 @@ const StockDetailPage: React.FC = () => {
                 <div style={styles.stockInfo}>
                     <h1 style={styles.symbol}>{stockData.symbol}</h1>
                     <div style={styles.priceContainer}>
-            <span style={styles.currentPrice}>
-              ${stockData.currentPrice.toFixed(2)}
-            </span>
+                        <span style={styles.currentPrice}>
+                            ${stockData.currentPrice.toFixed(2)}
+                        </span>
+                        {stockData.bestBidPrice > 0 && stockData.bestAskPrice > 0 && (
+                            <span style={styles.spread}>
+                                Spread: ${(stockData.bestAskPrice - stockData.bestBidPrice).toFixed(2)}
+                            </span>
+                        )}
                     </div>
                 </div>
             </div>
 
             {orderSuccess && (
-                <div style={styles.success}>{orderSuccess}</div>
+                <div style={styles.success}>
+                    <span style={styles.successIcon}>✓</span>
+                    {orderSuccess}
+                </div>
             )}
 
+            {/* Main Content Grid */}
             <div style={styles.content}>
+                {/* Left Column: Order Form and Order Book */}
                 <div style={styles.leftColumn}>
                     <OrderForm
                         symbol={stockData.symbol}
@@ -178,110 +201,196 @@ const StockDetailPage: React.FC = () => {
                         bestAskPrice={stockData.bestAskPrice || 0}
                     />
                 </div>
+
+                {/* Right Column: Chart and Trades/Orders */}
                 <div style={styles.rightColumn}>
-                    <TradesList trades={stockData.recentTrades || []} />
+                    <PriceChart
+                        symbol={stockData.symbol}
+                        currentPrice={stockData.currentPrice}
+                    />
+                    
+                    {/* Tab Selector */}
+                    <div style={styles.tabContainer}>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('trades')}
+                            style={{
+                                ...styles.tab,
+                                ...(activeTab === 'trades' ? styles.tabActive : {}),
+                            }}
+                        >
+                            Trade History
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('orders')}
+                            style={{
+                                ...styles.tab,
+                                ...(activeTab === 'orders' ? styles.tabActive : {}),
+                            }}
+                        >
+                            My Orders
+                        </button>
+                    </div>
+
+                    {/* Tab Content */}
+                    {activeTab === 'trades' ? (
+                        <TradeHistory trades={stockData.recentTrades || []} symbol={stockData.symbol} />
+                    ) : (
+                        <UserOpenOrders />
+                    )}
                 </div>
             </div>
         </div>
     );
 };
 
-const styles = {
+const styles: { [key: string]: React.CSSProperties } = {
     container: {
-        maxWidth: '1200px',
+        maxWidth: '1600px',
         margin: '0 auto',
         padding: '2rem 1rem',
-        minHeight: '80vh',
+        minHeight: 'calc(100vh - 80px)',
     },
     header: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '2rem',
+        paddingBottom: '1.5rem',
+        borderBottom: '2px solid #334155',
+        flexWrap: 'wrap',
+        gap: '1rem',
     },
     backButton: {
-        backgroundColor: '#6b7280',
+        backgroundColor: '#475569',
         color: 'white',
         border: 'none',
         padding: '0.5rem 1rem',
-        borderRadius: '0.25rem',
+        borderRadius: '0.5rem',
         cursor: 'pointer',
         fontSize: '0.875rem',
+        fontWeight: '500',
+        transition: 'all 0.2s',
     },
     stockInfo: {
         display: 'flex',
-        alignItems: 'center',
-        gap: '1rem',
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        gap: '0.5rem',
     },
     symbol: {
-        fontSize: '2rem',
-        fontWeight: 'bold',
-        color: '#1f2937',
+        fontSize: '2.5rem',
+        fontWeight: '700',
+        color: '#e2e8f0',
+        margin: 0,
     },
     priceContainer: {
         display: 'flex',
         alignItems: 'center',
-        gap: '0.5rem',
+        gap: '1rem',
     },
     currentPrice: {
-        fontSize: '1.5rem',
-        fontWeight: 'bold',
+        fontSize: '2rem',
+        fontWeight: '700',
         color: '#10b981',
     },
+    spread: {
+        fontSize: '0.875rem',
+        color: '#cbd5e1',
+        backgroundColor: '#0f172a',
+        padding: '0.25rem 0.75rem',
+        borderRadius: '0.375rem',
+    },
+    success: {
+        backgroundColor: '#14532d',
+        border: '1px solid #166534',
+        color: '#86efac',
+        padding: '1rem',
+        borderRadius: '0.5rem',
+        marginBottom: '1.5rem',
+        fontSize: '0.875rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+    },
+    successIcon: {
+        fontSize: '1.25rem',
+    },
     loading: {
-        textAlign: 'center' as const,
+        textAlign: 'center',
         fontSize: '1.125rem',
-        color: '#6b7280',
+        color: '#94a3b8',
         padding: '4rem',
         display: 'flex',
-        flexDirection: 'column' as const,
+        flexDirection: 'column',
         alignItems: 'center',
         gap: '1rem',
     },
     spinner: {
-        width: '2rem',
-        height: '2rem',
-        border: '3px solid #f3f4f6',
-        borderTop: '3px solid #3b82f6',
+        width: '3rem',
+        height: '3rem',
+        border: '4px solid #1e293b',
+        borderTop: '4px solid #10b981',
         borderRadius: '50%',
         animation: 'spin 1s linear infinite',
     },
     error: {
-        textAlign: 'center' as const,
+        textAlign: 'center',
         padding: '4rem',
-        color: '#ef4444',
+        color: '#f87171',
     },
     retryButton: {
-        backgroundColor: '#3b82f6',
+        backgroundColor: '#10b981',
         color: 'white',
         border: 'none',
         padding: '0.75rem 1.5rem',
-        borderRadius: '0.25rem',
+        borderRadius: '0.5rem',
         cursor: 'pointer',
         marginTop: '1rem',
         marginRight: '1rem',
-    },
-    success: {
-        backgroundColor: '#dcfce7',
-        border: '1px solid #bbf7d0',
-        color: '#166534',
-        padding: '0.75rem',
-        borderRadius: '0.25rem',
-        marginBottom: '1rem',
-        fontSize: '0.875rem',
+        fontWeight: '500',
     },
     content: {
         display: 'grid',
-        gridTemplateColumns: '2fr 1fr',
+        gridTemplateColumns: '1fr 1fr',
         gap: '2rem',
+        alignItems: 'start',
     },
     leftColumn: {
         display: 'flex',
-        flexDirection: 'column' as const,
+        flexDirection: 'column',
+        gap: '1.5rem',
     },
     rightColumn: {
         display: 'flex',
-        flexDirection: 'column' as const,
+        flexDirection: 'column',
+        gap: '1.5rem',
+    },
+    tabContainer: {
+        display: 'flex',
+        gap: '0.5rem',
+        backgroundColor: '#0f172a',
+        padding: '0.25rem',
+        borderRadius: '0.5rem',
+        border: '1px solid #334155',
+    },
+    tab: {
+        flex: 1,
+        padding: '0.75rem',
+        border: 'none',
+        borderRadius: '0.375rem',
+        fontSize: '0.875rem',
+        fontWeight: '600',
+        cursor: 'pointer',
+        backgroundColor: 'transparent',
+        color: '#94a3b8',
+        transition: 'all 0.2s',
+    },
+    tabActive: {
+        backgroundColor: '#0f172a',
+        color: '#e2e8f0',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
     },
 };
 
