@@ -4,15 +4,16 @@
 1. [Architecture Overview](#architecture-overview)
 2. [Infrastructure Requirements](#infrastructure-requirements)
 3. [Pre-Deployment Checklist](#pre-deployment-checklist)
-4. [Phase 1: Domain & DNS Setup](#phase-1-domain--dns-setup)
-5. [Phase 2: Backend Infrastructure](#phase-2-backend-infrastructure)
-6. [Phase 3: Frontend Deployment (Vercel)](#phase-3-frontend-deployment-vercel)
-7. [Phase 4: Environment Configuration](#phase-4-environment-configuration)
-8. [Phase 5: Database Migration](#phase-5-database-migration)
-9. [Phase 6: Testing & Validation](#phase-6-testing--validation)
-10. [Phase 7: Monitoring & Maintenance](#phase-7-monitoring--maintenance)
-11. [Cost Estimates](#cost-estimates)
-12. [Troubleshooting](#troubleshooting)
+4. [Branching & Deployment Strategy](#branching--deployment-strategy)
+5. [Phase 1: Domain & DNS Setup](#phase-1-domain--dns-setup)
+6. [Phase 2: Backend Infrastructure](#phase-2-backend-infrastructure)
+7. [Phase 3: Frontend Deployment (Vercel)](#phase-3-frontend-deployment-vercel)
+8. [Phase 4: Environment Configuration](#phase-4-environment-configuration)
+9. [Phase 5: Database Migration](#phase-5-database-migration)
+10. [Phase 6: Testing & Validation](#phase-6-testing--validation)
+11. [Phase 7: Monitoring & Maintenance](#phase-7-monitoring--maintenance)
+12. [Cost Estimates](#cost-estimates)
+13. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -110,6 +111,50 @@ Domain: greentrader.org
   - [ ] Redis Cloud account
   - [ ] Domain registrar account
   - [ ] Cloudflare account (for DNS)
+
+---
+
+## Branching & Deployment Strategy
+
+Use this workflow so production stays stable and every release is traceable. It matches how Vercel and Railway expect to deploy (one branch = production).
+
+### Recommended: **main = production** (no separate `prod` branch)
+
+| Branch | Purpose | Deploys to |
+|--------|---------|------------|
+| **main** | Single source of truth for production. Always deployable, no WIP. | Production (Vercel + Railway) |
+| **feature/xxx** (e.g. `feature/minhnguyen_work`) | Your work. Merge into `main` only via Pull Request. | Nothing (local/preview only) |
+
+**Why not merge directly from your branch to main?**
+
+- **Don’t** push/merge from a feature branch straight to `main` without a Pull Request.
+- **Do** open a PR from `feature/your-branch` → `main`, review (or self-review), then merge. That gives you:
+  - A clear record of what went to production and when
+  - A place for CI (tests, build) to run before merge
+  - Easy rollback (revert the merge commit)
+
+**Workflow:**
+
+1. Create a branch from `main`:  
+   `git checkout main && git pull && git checkout -b feature/your-feature`
+2. Commit and push to the feature branch.
+3. Open a **Pull Request** into `main`.
+4. After review (and green CI if you have it), **merge** the PR.
+5. Vercel/Railway deploy from `main` automatically (or trigger deploy on that branch).  
+   Production = whatever is on `main`.
+
+**When a separate `prod` branch makes sense (optional):**
+
+- You want **“release on demand”**: merge `main` → `prod` only when you choose to release; only `prod` is deployed.
+- You need **hotfixes** that go to production without pulling in unfinished work from `main`.
+
+If you add `prod`, then:
+
+- Configure Vercel/Railway to deploy from **prod** (not `main`).
+- To release: merge `main` → `prod`, then deploy (or let auto-deploy run on `prod`).
+- After a hotfix on `prod`, merge `prod` back into `main` so history stays in sync.
+
+For most small teams and solo devs, **main = production** is simpler and is the recommended starting point.
 
 ---
 

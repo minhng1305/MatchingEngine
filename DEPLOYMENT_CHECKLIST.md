@@ -2,6 +2,13 @@
 
 Use this checklist to track your deployment progress.
 
+## Branching (see DEPLOYMENT_PLAN.md § Branching & Deployment Strategy)
+
+- [ ] Use **main** as production branch (Vercel/Railway deploy from main)
+- [ ] Work in feature branches (e.g. `feature/your-name`)
+- [ ] Merge to main only via **Pull Request** (no direct push to main from feature branches)
+- [ ] Optional: use a separate `prod` branch only if you need release-on-demand or hotfix workflow
+
 ## Phase 1: Domain & DNS Setup (DONE)
 - [x] Purchase domain name (Namecheap, Google Domains, etc.)
 - [x] Sign up for Cloudflare (free)
@@ -42,36 +49,36 @@ Use this checklist to track your deployment progress.
 - [x] Add PostgreSQL service in Railway dashboard
 
 ### Environment Variables
-- [ ] Set `DATABASE_URL`
-- [ ] Set `DB_USERNAME`
-- [ ] Set `DB_PASSWORD`
-- [ ] Set `KAFKA_BOOTSTRAP_SERVERS`
-- [ ] Set `KAFKA_SECURITY_PROTOCOL` (if using Confluent)
-- [ ] Set `KAFKA_SASL_MECHANISM` (if using Confluent)
-- [ ] Set `KAFKA_JAAS_CONFIG` (if using Confluent)
-- [ ] Set `REDIS_HOST`
-- [ ] Set `REDIS_PORT`
-- [ ] Set `REDIS_PASSWORD` (if required)
-- [ ] Set `REDIS_SSL` (true for cloud providers)
-- [ ] Set `ALLOWED_ORIGINS` (your frontend domain)
-- [ ] Set `SPRING_PROFILES_ACTIVE=production`
-- [ ] Set `PORT=8080`
+- [x] Set `DATABASE_URL`
+- [x] Set `DB_USERNAME`
+- [x] Set `DB_PASSWORD`
+- [x] Set `KAFKA_BOOTSTRAP_SERVERS`
+- [x] Set `KAFKA_SECURITY_PROTOCOL` (if using Confluent)
+- [x] Set `KAFKA_SASL_MECHANISM` (if using Confluent)
+- [x] Set `KAFKA_JAAS_CONFIG` (if using Confluent)
+- [x] Set `REDIS_HOST`
+- [x] Set `REDIS_PORT`
+- [x] Set `REDIS_PASSWORD` (if required)
+- [x] Set `REDIS_SSL` (true for cloud providers)
+- [x] Set `ALLOWED_ORIGINS` (your frontend domain)
+- [x] Set `SPRING_PROFILES_ACTIVE=production`
+- [x] Set `PORT=8080`
 
 ### Deploy
-- [ ] Push code to GitHub (if using auto-deploy)
-- [ ] OR run `railway up` manually
-- [ ] Verify deployment URL
-- [ ] Test health endpoint: `curl https://your-railway-url.up.railway.app/api/health`
+- [x] Push code to GitHub (if using auto-deploy)
+- [x] OR run `railway up` manually
+- [x] Verify deployment URL
+- [x] Test health endpoint: `curl https://your-railway-url.up.railway.app/api/health`
 
 ## Phase 4: Frontend Deployment
 
 ### Vercel Setup
-- [ ] Sign up for Vercel account
-- [ ] Connect GitHub repository
-- [ ] Create new project
-- [ ] Set root directory: `trading-frontend`
-- [ ] Set build command: `npm run build`
-- [ ] Set output directory: `build`
+- [x] Sign up for Vercel account
+- [x] Connect GitHub repository
+- [x] Create new project
+- [x] Set root directory: `trading-frontend`
+- [x] Set build command: `npm run build`
+- [x] Set output directory: `build`
 
 ### Environment Variables
 - [ ] Set `REACT_APP_API_BASE_URL` (your backend API URL)
@@ -89,11 +96,11 @@ Use this checklist to track your deployment progress.
 ## Phase 5: DNS Configuration
 
 ### Cloudflare DNS Records
-- [ ] Add CNAME record for `app` → `cname.vercel-dns.com` (Proxied)
-- [ ] Add CNAME record for `api` → `your-railway-url.up.railway.app` (Proxied)
-- [ ] Wait for DNS propagation (5-30 minutes)
-- [ ] Verify: `dig app.yourdomain.com`
-- [ ] Verify: `dig api.yourdomain.com`
+- [x] Add CNAME record for `app` → `cname.vercel-dns.com` (Proxied)
+- [x] Add CNAME record for `api` → `your-railway-url.up.railway.app` (Proxied)
+- [x] Wait for DNS propagation (5-30 minutes)
+- [x] Verify: `dig app.yourdomain.com`
+- [x] Verify: `dig api.yourdomain.com`
 
 ## Phase 6: Testing
 

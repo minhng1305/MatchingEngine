@@ -6,12 +6,16 @@ import com.project.matchingengine.models.order.Stock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.context.annotation.Profile;
+
 import java.util.Map;
 import java.util.HashMap;
+
 
 @RestController
 @CrossOrigin(origins = "http://localhost:3000")
 @RequestMapping("api/prices")
+@Profile("!ingress")
 public class PriceController {
 
     private final OrderBookConfig orderBookConfig;

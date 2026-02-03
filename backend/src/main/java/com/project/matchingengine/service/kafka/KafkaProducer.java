@@ -25,16 +25,7 @@ public class KafkaProducer {
         this.objectMapper = objectMapper;
     }
 
-    /**
-     * Sends order to Kafka topic "orders" with key = symbol.
-     * 
-     * Keying by symbol ensures:
-     * - All orders for the same symbol go to the same partition
-     * - Ordering is preserved per symbol
-     * - Parallel processing across different symbols
-     * 
-     * @param order The order to send
-     */
+
     public void sendOrder(Order order) {
         try {
             String orderJson = objectMapper.writeValueAsString(order);
@@ -50,6 +41,7 @@ public class KafkaProducer {
             throw new RuntimeException("Failed to serialize order to JSON", e);
         }
     }
+
 
     public void flushProducer() {
         kafkaTemplate.flush();

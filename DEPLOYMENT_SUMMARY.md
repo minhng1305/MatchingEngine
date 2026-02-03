@@ -37,7 +37,7 @@
 │  Frontend      │                  │  Backend API    │
 │  (Vercel)      │                  │  (Railway)      │
 │                │                  │                 │
-│ app.yourdomain │◄─────────────────┤ api.yourdomain │
+│ app.yourdomain │◄─────────────────┤ api.yourdomain  │
 │      .com      │   HTTPS/API      │      .com       │
 └────────────────┘                  └────────┬────────┘
                                              │
@@ -45,8 +45,8 @@
                     │                       │                       │
             ┌───────▼──────┐      ┌─────────▼──────┐    ┌──────────▼──────┐
             │  PostgreSQL  │      │  Kafka Cluster │    │  Redis Cache    │
-            │  (Railway/    │      │  (Upstash/     │    │  (Upstash/      │
-            │   Supabase)   │      │   Confluent)   │    │   Redis Cloud)  │
+            │  (Railway/   │      │  (Upstash/     │    │  (Upstash/      │
+            │   Supabase)  │      │   Confluent)   │    │   Redis Cloud)  │
             └──────────────┘      └────────────────┘    └─────────────────┘
 ```
 
