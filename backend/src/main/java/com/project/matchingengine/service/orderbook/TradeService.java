@@ -21,15 +21,18 @@ public class TradeService {
         this.tradeRepo = tradeRepo;
     }
 
+
     public void saveTrade(Trade trade)
     {
         tradeRepo.save(trade);
     }
 
+
     public List<Trade> getAllTrades()
     {
         return tradeRepo.findAll();
     }
+
 
     // TODO: Fetch trades by symbol logic
     public List<Trade> getTradesBySymbol(String symbol)

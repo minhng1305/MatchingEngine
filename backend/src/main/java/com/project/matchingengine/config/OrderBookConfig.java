@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 import com.project.matchingengine.models.order.OrderBook;
 import com.project.matchingengine.models.order.Stock;
@@ -15,6 +16,7 @@ import com.project.matchingengine.service.user.UserDetailsCacheService;
 
 
 @Configuration
+@Profile("!ingress")
 public class OrderBookConfig {
     private static final Logger logger = LoggerFactory.getLogger(OrderBookConfig.class);
     private Map<String, OrderBook> orderBooks;

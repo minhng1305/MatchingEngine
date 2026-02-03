@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.UUID;
+
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -43,8 +44,8 @@ public class OrderBook {
         this.lastTenFulfilledOrders = new LinkedList<>();
         this.userDetailsCacheService = userDetailsCacheService;
         this.orderBookSummary = new OrderBookSummary(symbol, new ArrayList<>(), new ArrayList<>(), currentPrice, 0.0, 0, 0.0, 0, new ArrayList<>());
-
     }
+
 
     public String getSymbol() {
         return symbol;
@@ -76,6 +77,7 @@ public class OrderBook {
             writeLock.unlock();
         }
     }
+
 
     // TODO: Orders from same user should not match at all. Yet Error continues to exist
     private void matchBuyOrder(Order buyOrder) {
@@ -117,6 +119,7 @@ public class OrderBook {
         }
     }
 
+
     // TODO: Orders from same user should not match at all. Yet Error continues to exist
     private void matchSellOrder(Order sellOrder) {
         while (!buyOrdersList.isEmpty() && sellOrder.getCurrentQuantity() > 0) {
@@ -156,6 +159,7 @@ public class OrderBook {
         }
     }
 
+    
     public double getTradePrice(Order buyOrder, Order sellOrder) {
         double tradePrice = 0.0;
 

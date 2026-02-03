@@ -1,5 +1,6 @@
 package com.project.matchingengine.service.orderbook;
 
+import com.project.matchingengine.models.order.OrderSide;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -22,8 +23,6 @@ public class OrderService {
     private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
     private final KafkaProducer kafkaProducer;
     private final UserDetailsCacheService userDetailsCacheService;
-
-    // TODO: Remove repos once caching is fully implemented
     private final OrderRepo orderRepo;
     private final UserRepo userRepo;
 
@@ -42,15 +41,16 @@ public class OrderService {
     // TODO: Verify this endpoint logic
     public void submitOrder(@Payload Order order)
     {
-//        if (order.getSide() == OrderSide.BUY) {
-//            userDetailsCacheService.placeOrder(order.getUserId(), order.getSymbol(), order.getCurrentQuantity(), order.getPrice(), true);
-//        }
-//        else if (order.getSide() == OrderSide.SELL) {
-//            userDetailsCacheService.placeOrder(order.getUserId(), order.getSymbol(), order.getCurrentQuantity(), order.getPrice(), false);
-//        }
+        if (order.getSide() == OrderSide.BUY) {
+            userDetailsCacheService.placeOrder(order.getUserId(), order.getSymbol(), order.getCurrentQuantity(), order.getPrice(), true);
+        }
+        else if (order.getSide() == OrderSide.SELL) {
+            userDetailsCacheService.placeOrder(order.getUserId(), order.getSymbol(), order.getCurrentQuantity(), order.getPrice(), false);
+        }
         kafkaProducer.sendOrder(order);
         logger.info("Order {} submitted for user {}. Funds held if BUY.", order.getOrderId(), order.getUserId());
     }
+
 
     // TODO: Update such that it pulled data from cache rather than DB
     public Order getOrderById(UUID orderId)
@@ -63,17 +63,20 @@ public class OrderService {
         return null;
     }
 
+
     // TODO: Update such that it pulled data from cache rather than DB
     public List<Order> getAllOrders()
     {
         return orderRepo.findAll();
     }
 
+
     // TODO: Update such that it pulled data from cache rather than DB
     public List<Order> getOrdersBySymbol(String symbol)
     {
         return null;
     }
+
 
     // TODO: Update such that it pulled data from cache rather than DB
     public void updateOrder(Order order)

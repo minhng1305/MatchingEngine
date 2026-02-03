@@ -4,9 +4,11 @@ import java.sql.Timestamp;
 import java.util.Map;
 import java.util.UUID;
 
+import com.project.matchingengine.service.orderbook.OrderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -21,35 +23,26 @@ import com.project.matchingengine.models.order.OrderSide;
 import com.project.matchingengine.models.order.OrderType;
 import com.project.matchingengine.service.kafka.KafkaProducer;
 
-/**
- * Ingress Controller - Stateless order entry point
- * 
- * This controller receives all orders and produces them to Kafka.
- * It does NOT:
- * - Access database
- * - Access OrderBook
- * - Perform matching logic
- * 
- * It ONLY:
- * - Validates order data
- * - Produces to Kafka topic "orders" with key = symbol
- */
+
 @RestController
 @CrossOrigin(origins = "http://localhost:3000")
 @RequestMapping("/api/orders")
 @Validated
+@Profile("ingress")
 public class IngressController {
 
     private static final Logger logger = LoggerFactory.getLogger(IngressController.class);
     private final ObjectMapper objectMapper;
-    private final KafkaProducer kafkaProducer;
+//    private final KafkaProducer kafkaProducer;
+    private final OrderService orderService;
 
     @Autowired
-    public IngressController(ObjectMapper objectMapper, KafkaProducer kafkaProducer) {
+    public IngressController(ObjectMapper objectMapper, OrderService orderService) {
         this.objectMapper = objectMapper;
-        this.kafkaProducer = kafkaProducer;
+        this.orderService = orderService;
     }
 
+    // FIXME: As this sends order immediately to Kafka, there is no validation whether the user exists or has sufficient balance, as well as no cache check
     @PostMapping("/submit")
     public ResponseEntity<?> submitOrder(@RequestBody Map<String, Object> orderData) {
         try {
@@ -86,8 +79,7 @@ public class IngressController {
                 new Timestamp(System.currentTimeMillis())
             );
 
-            kafkaProducer.sendOrder(order);
-            logger.info("Order {} submitted via ingress for symbol: {}", order.getOrderId(), symbol);
+            orderService.submitOrder(order);
 
             return ResponseEntity.ok(Map.of(
                 "success", true,

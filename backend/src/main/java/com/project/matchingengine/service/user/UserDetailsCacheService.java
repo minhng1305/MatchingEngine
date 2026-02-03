@@ -28,13 +28,12 @@ import com.project.matchingengine.repository.authentication.PortfolioRepo;
 import com.project.matchingengine.repository.authentication.UserRepo;
 
 
-/*
- * In-memory cache for user balances and portfolios.
- * This is the only service that accesses the database directly.
- * Other services should use this service to fetch from the cache instead of directly accessing the database.
+/** TODO:
+ * Verify Redis cache logic
+ * Ensure thread-safety and atomicity with Lua scripts
+ * Ensure thread-safe DB sync with distributed locks
  */
-// TODO: Update such that when cache updates to database, it should maintained a fixed-size trade record in the cache to fetch to frontend for real-time trading
-// TODO: Change this from in-memory cache to Redis cache for better scalability
+
 @Service
 public class UserDetailsCacheService {
     private static final Logger logger = LoggerFactory.getLogger(UserDetailsCacheService.class);
@@ -48,7 +47,6 @@ public class UserDetailsCacheService {
     @Autowired
     private PortfolioRepo portfolioRepo;
 
-    // Lua scripts for atomic operations
     private DefaultRedisScript<String> applyBuyTradeScript;
     private DefaultRedisScript<String> applySellTradeScript;
     private DefaultRedisScript<String> placeBuyOrderScript;
@@ -57,9 +55,6 @@ public class UserDetailsCacheService {
     private static final long EVICTION_TIME_MS = 1800_000;  // 30-min inactivity
     private static final long DB_SYNC_LOCK_TIMEOUT = 10;  // 10 seconds lock timeout
 
-    /**
-     * Initialize Lua scripts on service creation
-     */
     @Autowired
     public void initLuaScripts() {
         this.applyBuyTradeScript = new DefaultRedisScript<>();

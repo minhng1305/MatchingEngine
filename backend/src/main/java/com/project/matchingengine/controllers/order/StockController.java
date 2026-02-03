@@ -6,9 +6,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.context.annotation.Profile;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import com.project.matchingengine.service.orderbook.TradeService;
 import com.project.matchingengine.models.order.Trade;
 import com.project.matchingengine.models.order.Stock;
@@ -26,6 +26,7 @@ import java.util.HashMap;
 @CrossOrigin(origins = "http://localhost:3000")
 @RequestMapping("api/stocks")
 @Validated
+@Profile("!ingress")
 public class StockController {
     private static final Logger logger = LoggerFactory.getLogger(StockController.class);
     private final ObjectMapper objectMapper;
