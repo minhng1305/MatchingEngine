@@ -88,26 +88,16 @@ public class KafkaConsumerConfig {
     public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
-
-        // Configurable concurrency (default: 4 threads per server)
-        // Total threads across all servers should not exceed partition count
         factory.setConcurrency(concurrency);
-
-        // Enable batch processing
         factory.setBatchListener(true);
-
-        // Set error handler with DLQ support
         factory.setCommonErrorHandler(errorHandler());
-
         // Optimize poll settings
         Map<String, Object> props = new HashMap<>(factory.getConsumerFactory().getConfigurationProperties());
         props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 500); // Process up to 500 records per poll
         props.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, 1024 * 1024); // 1MB minimum fetch
         props.put(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, 500); // Max wait 500ms
         factory.getContainerProperties().setPollTimeout(1500);
-
         factory.setConsumerFactory(new DefaultKafkaConsumerFactory<>(props));
-
         return factory;
     }
 }

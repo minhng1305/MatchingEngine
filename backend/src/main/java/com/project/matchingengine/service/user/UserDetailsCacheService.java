@@ -107,63 +107,46 @@ public class UserDetailsCacheService {
         }
     }
 
-    /**
-     * Get user balance from Redis (load from DB if not in Redis)
-     */
+
     public UserDetailsCacheService.CachedUserDetails getBalance(UUID userId) {
         String balanceKey = RedisKeys.userBalance(userId);
 
-        // Check Redis first (fast path)
         Map<Object, Object> balanceHash = stringRedisTemplate.opsForHash().entries(balanceKey);
 
         if (balanceHash != null && !balanceHash.isEmpty()) {
-            // Found in Redis - build CachedUserDetails from Redis data
             double ledger = Double.parseDouble(String.valueOf(balanceHash.get("ledger")));
             double available = Double.parseDouble(String.valueOf(balanceHash.get("available")));
-
-            // Load holdings from Redis
             Map<String, Integer> holdings = loadHoldingsFromRedis(userId);
-
             CachedUserDetails cached = new CachedUserDetails(userId, ledger, available, holdings);
             return cached;
         }
-
-        // Cache miss - load from DB and store in Redis
         return loadUserIntoRedis(userId);
     }
 
-    /**
-     * Load holdings from Redis for a user
-     */
+
     private Map<String, Integer> loadHoldingsFromRedis(UUID userId) {
         Map<String, Integer> holdings = new HashMap<>();
 
-        // Get all holding keys for this user: me:user:{userId}:h:*
         String pattern = "me:user:" + userId + ":h:*";
         Set<String> keys = stringRedisTemplate.keys(pattern);
 
         if (keys != null) {
             for (String key : keys) {
-                // Extract symbol from key: me:user:{userId}:h:{symbol}
-                String symbol = key.substring(key.lastIndexOf(":") + 1);
+                String symbol = key.substring(key.lastIndexOf(":") + 1); // Extract symbol from key: me:user:{userId}:h:{symbol}
                 String quantityStr = stringRedisTemplate.opsForValue().get(key);
                 if (quantityStr != null) {
                     holdings.put(symbol, Integer.parseInt(quantityStr));
                 }
             }
         }
-
         return holdings;
     }
 
-    /**
-     * Load user from DB into Redis (on-demand)
-     */
+
     private CachedUserDetails loadUserIntoRedis(UUID userId) {
         User user = userRepo.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found: " + userId));
 
-        // Fetch portfolio from DB
         Map<String, Integer> holdings = portfolioRepo.findByUserId(userId)
                 .stream()
                 .collect(Collectors.toMap(
@@ -171,8 +154,6 @@ public class UserDetailsCacheService {
                         Portfolio::getQuantity,
                         Integer::sum  // Handle duplicates
                 ));
-
-        // Store balance in Redis
         String balanceKey = RedisKeys.userBalance(userId);
         Map<String, String> balanceHash = new HashMap<>();
         balanceHash.put("ledger", String.valueOf(user.getLedgerBalance()));
@@ -180,12 +161,10 @@ public class UserDetailsCacheService {
         balanceHash.put("updatedAt", String.valueOf(System.currentTimeMillis()));
         stringRedisTemplate.opsForHash().putAll(balanceKey, balanceHash);
 
-        // Store holdings in Redis
         for (Map.Entry<String, Integer> entry : holdings.entrySet()) {
             String holdingKey = RedisKeys.userHolding(userId, entry.getKey());
             stringRedisTemplate.opsForValue().set(holdingKey, String.valueOf(entry.getValue()));
         }
-
         logger.debug("User {} loaded into Redis cache", userId);
 
         return new CachedUserDetails(
@@ -196,16 +175,14 @@ public class UserDetailsCacheService {
         );
     }
 
-    /**
-     * Apply trade atomically to Redis using Lua script
-     */
+
+
+    // FIXME: Create applyTrade method for both buyer and seller instead of separate methods
     public void applyTrade(UUID userId, String symbol, int quantityDelta, double tradePrice, double initialPrice, boolean isBuy) {
-        // Ensure user exists in Redis (load from DB if not)
         String balanceKey = RedisKeys.userBalance(userId);
         if (!stringRedisTemplate.hasKey(balanceKey)) {
             loadUserIntoRedis(userId);
         }
-
         String holdingKey = RedisKeys.userHolding(userId, symbol);
         String updatedAt = String.valueOf(System.currentTimeMillis());
 
@@ -235,24 +212,18 @@ public class UserDetailsCacheService {
         if (!"OK".equals(result)) {
             throw new RuntimeException("Failed to apply trade in Redis: " + result);
         }
-
         // Mark user as dirty for DB sync
         stringRedisTemplate.opsForSet().add(RedisKeys.dirtyUsers(), userId.toString());
-
         logger.debug("Applied {} trade for user {}: {} {} @ {}",
                 isBuy ? "BUY" : "SELL", userId, quantityDelta, symbol, tradePrice);
     }
 
-    /**
-     * Check if user can place order and deduct atomically using Lua script
-     */
+
     public void placeOrder(UUID userId, String symbol, int quantity, double price, boolean isBuy) {
-        // Ensure user exists in Redis
         String balanceKey = RedisKeys.userBalance(userId);
         if (!stringRedisTemplate.hasKey(balanceKey)) {
             loadUserIntoRedis(userId);
         }
-
         String updatedAt = String.valueOf(System.currentTimeMillis());
         List<String> keys;
         List<String> args;
@@ -268,7 +239,6 @@ public class UserDetailsCacheService {
             args = List.of(String.valueOf(quantity));
             script = placeSellOrderScript;
         }
-
         String result = stringRedisTemplate.execute(script, keys, args.toArray(new Object[0]));
 
         if ("INSUFFICIENT".equals(result)) {
@@ -315,22 +285,16 @@ public class UserDetailsCacheService {
                 }
             }
         }
-
         return result;
     }
 
-    /**
-     * Background task to clean up stale cache entries from Redis
-     * Evicts users that haven't been accessed in EVICTION_TIME_MS
-     */
+
+    // TODO: Veryfy this eviction logic
     @Scheduled(fixedRate = 300000)  // Every 5 mins
     public void evictStaleEntries() {
         long now = System.currentTimeMillis();
         int evicted = 0;
-
-        // Get all balance keys: me:user:*:balance
         Set<String> balanceKeys = stringRedisTemplate.keys("me:user:*:balance");
-
         if (balanceKeys != null) {
             for (String key : balanceKeys) {
                 String updatedAtStr = (String) stringRedisTemplate.opsForHash().get(key, "updatedAt");
@@ -355,15 +319,12 @@ public class UserDetailsCacheService {
                 }
             }
         }
-
         if (evicted > 0) {
             logger.info("Cache cleanup: evicted {} inactive users from Redis", evicted);
         }
     }
 
-    /**
-     * Get dirty users from Redis set
-     */
+
     public Set<UUID> getDirtyUsers() {
         Set<String> dirtyUserStrs = stringRedisTemplate.opsForSet().members(RedisKeys.dirtyUsers());
         if (dirtyUserStrs == null) {
@@ -374,14 +335,14 @@ public class UserDetailsCacheService {
                 .collect(Collectors.toSet());
     }
 
+
     private void clearDirtyUsers() {
         stringRedisTemplate.delete(RedisKeys.dirtyUsers());
     }
 
-    /**
-     * Background task to sync Redis cache to database
-     * Uses distributed lock to ensure only one server syncs at a time
-     */
+
+    // TODO: Verify this DB sync logic
+    // FIXME: Optimize the batch update to minimize DB calls
     @Scheduled(fixedRate = 5000) // Every 5 seconds
     @Transactional
     public void updateDatabase() {
@@ -393,20 +354,16 @@ public class UserDetailsCacheService {
                     "locked",
                     java.time.Duration.ofSeconds(DB_SYNC_LOCK_TIMEOUT)
             );
-
             if (lockAcquired == null || !lockAcquired) {
                 logger.debug("DB sync lock not acquired, another server is syncing");
                 return;
             }
-
             try {
                 Set<UUID> dirtyUsers = getDirtyUsers();
-
                 if (dirtyUsers.isEmpty()) {
                     logger.debug("No dirty users, skipping DB update");
                     return;
                 }
-
                 logger.info("Starting batch update for {} dirty users from Redis...", dirtyUsers.size());
 
                 // Step 1: Update Users table from Redis
@@ -492,28 +449,14 @@ public class UserDetailsCacheService {
      * Invalidate user cache in Redis (delete all keys for this user)
      */
     public void invalidate(UUID userId) {
-        // Delete balance
         stringRedisTemplate.delete(RedisKeys.userBalance(userId));
-
-        // Delete all holdings: me:user:{userId}:h:*
         String pattern = "me:user:" + userId + ":h:*";
         Set<String> holdingKeys = stringRedisTemplate.keys(pattern);
         if (holdingKeys != null && !holdingKeys.isEmpty()) {
             stringRedisTemplate.delete(holdingKeys);
         }
-
         // Remove from dirty set
         stringRedisTemplate.opsForSet().remove(RedisKeys.dirtyUsers(), userId.toString());
-
         logger.debug("Invalidated Redis cache for user {}", userId);
-    }
-
-    /**
-     * Get approximate cache size (number of users in Redis)
-     * Note: This is less efficient with Redis as we need to scan keys
-     */
-    public int getCacheSize() {
-        Set<String> balanceKeys = stringRedisTemplate.keys("me:user:*:balance");
-        return balanceKeys != null ? balanceKeys.size() : 0;
     }
 }

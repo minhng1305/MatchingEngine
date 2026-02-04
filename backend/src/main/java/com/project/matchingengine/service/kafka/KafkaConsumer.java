@@ -50,6 +50,7 @@ public class KafkaConsumer {
         this.dbExecutor = dbExecutor;
     }
 
+
     @KafkaListener(
             id = "orderSubmissionListener",
             topics = "${app.kafka.topic.orders:orders}",
@@ -57,9 +58,9 @@ public class KafkaConsumer {
             containerFactory = "kafkaListenerContainerFactory"
     )
     public void processOrders(
-            List<String> orderJsonBatch,
-            @Header(value = "kafka_receivedPartitionId", required = false) List<Integer> partitions
-    ) {
+                            List<String> orderJsonBatch,
+                            @Header(value = "kafka_receivedPartitionId", required = false) List<Integer> partitions) 
+    {
         try {
             if (partitions != null && !partitions.isEmpty()) {
                 Set<Integer> uniquePartitions = new HashSet<>(partitions);
@@ -88,9 +89,7 @@ public class KafkaConsumer {
 
             for (Map.Entry<String, List<Order>> entry : ordersBySymbol.entrySet()) {
                 OrderBook orderBook = orderBookConfig.getOrderBook(entry.getKey());
-                for (Order order : entry.getValue()) {
-                    orderBook.addOrder(order);
-                }
+                orderBook.addOrder(entry.getValue());
                 // Broadcast once per symbol batch
                 notificationService.broadcastOrderBookUpdate(orderBook.getOrderBookSummary());
             }
