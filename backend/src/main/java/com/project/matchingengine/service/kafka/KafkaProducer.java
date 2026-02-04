@@ -26,17 +26,28 @@ public class KafkaProducer {
     }
 
 
+    /**
+     * Sends order to Kafka asynchronously (fire-and-forget with callback).
+     * Request thread returns immediately after enqueue; broker ack is handled in callback.
+     */
     public void sendOrder(Order order) {
         try {
             String orderJson = objectMapper.writeValueAsString(order);
             String symbol = order.getSymbol();
-            
+ 
             if (symbol == null || symbol.trim().isEmpty()) {
                 throw new IllegalArgumentException("Order symbol cannot be null or empty");
             }
-            kafkaTemplate.send(ordersTopic, symbol, orderJson);
-            logger.info("Order {} sent to topic: {} with key (symbol): {}", 
-                order.getOrderId().toString(), ordersTopic, symbol);
+
+            kafkaTemplate.send(ordersTopic, symbol, orderJson)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        logger.error("Failed to send order {} to Kafka: {}", order.getOrderId(), ex.getMessage(), ex);
+                    } else {
+                        logger.debug("Order {} sent to topic: {} with key (symbol): {}",
+                            order.getOrderId(), ordersTopic, symbol);
+                    }
+                });
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize order to JSON", e);
         }

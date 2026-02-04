@@ -52,26 +52,28 @@ public class OrderBook {
     }
 
 
-    public void addOrder(Order order) {
+    public void addOrder(List<Order> orders) {
         writeLock.lock();
         try {
-            if (order.getSide() == OrderSide.BUY) {
-                matchBuyOrder(order);
-                if (order.getCurrentQuantity() > 0) {
-                    buyOrdersList.add(order);
+            for (Order order : orders) {
+                if (order.getSide() == OrderSide.BUY) {
+                    matchBuyOrder(order);
+                    if (order.getCurrentQuantity() > 0) {
+                        buyOrdersList.add(order);
+                    } else {
+                        processFullyFilledOrders(order);
+                    }
                 } else {
-                    processFullyFilledOrders(order);
+                    matchSellOrder(order);
+                    if (order.getCurrentQuantity() > 0) {
+                        sellOrdersList.add(order);
+                    } else {
+                        processFullyFilledOrders(order);
+                    }
                 }
-            } else {
-                matchSellOrder(order);
-                if (order.getCurrentQuantity() > 0) {
-                    sellOrdersList.add(order);
-                } else {
-                    processFullyFilledOrders(order);
+                if (!trades.isEmpty()) {
+                    this.currentPrice = trades.get(trades.size() - 1).getPrice();
                 }
-            }
-            if (!trades.isEmpty()) {
-                this.currentPrice = trades.get(trades.size() - 1).getPrice();
             }
         } finally {
             writeLock.unlock();
@@ -129,7 +131,8 @@ public class OrderBook {
                 double tradePrice = getTradePrice(buyOrder, sellOrder);
                 Trade trade = new Trade(UUID.randomUUID(),
                                         this.symbol,
-                                        tradePrice, tradeQuantity, 
+                                        tradePrice,
+                                        tradeQuantity,
                                         buyOrder.getOrderId(), 
                                         sellOrder.getOrderId(),
                                         buyOrder.getUserId(),
@@ -159,7 +162,7 @@ public class OrderBook {
         }
     }
 
-    
+
     public double getTradePrice(Order buyOrder, Order sellOrder) {
         double tradePrice = 0.0;
 
@@ -184,7 +187,6 @@ public class OrderBook {
 
     private void processFullyFilledOrders(Order order) {
         order.setStatus(OrderStatus.FILLED);
-
         lastTenFulfilledOrders.offer(order);
         if (lastTenFulfilledOrders.size() >= 10) {
             lastTenFulfilledOrders.poll();
@@ -216,7 +218,6 @@ public class OrderBook {
             if (trades == null || trades.isEmpty()) {
                 return 0.0; // Or another default value like -1 or Double.NaN
             }
-            // Update currentPrice from last trade
             this.currentPrice = trades.get(trades.size() - 1).getPrice();
             return currentPrice;
         } finally {

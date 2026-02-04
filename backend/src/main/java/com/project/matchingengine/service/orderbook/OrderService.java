@@ -38,15 +38,15 @@ public class OrderService {
         this.userDetailsCacheService = userDetailsCacheService;
     }
 
-    // TODO: Verify this endpoint logic
+
     public void submitOrder(@Payload Order order)
     {
-        if (order.getSide() == OrderSide.BUY) {
-            userDetailsCacheService.placeOrder(order.getUserId(), order.getSymbol(), order.getCurrentQuantity(), order.getPrice(), true);
-        }
-        else if (order.getSide() == OrderSide.SELL) {
-            userDetailsCacheService.placeOrder(order.getUserId(), order.getSymbol(), order.getCurrentQuantity(), order.getPrice(), false);
-        }
+//        if (order.getSide() == OrderSide.BUY) {
+//            userDetailsCacheService.placeOrder(order.getUserId(), order.getSymbol(), order.getCurrentQuantity(), order.getPrice(), true);
+//        }
+//        else if (order.getSide() == OrderSide.SELL) {
+//            userDetailsCacheService.placeOrder(order.getUserId(), order.getSymbol(), order.getCurrentQuantity(), order.getPrice(), false);
+//        }
         kafkaProducer.sendOrder(order);
         logger.info("Order {} submitted for user {}. Funds held if BUY.", order.getOrderId(), order.getUserId());
     }

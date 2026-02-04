@@ -3,13 +3,11 @@ package com.project.matchingengine.config;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
@@ -38,9 +36,17 @@ public class KafkaProducerConfig {
         
         // For idempotence: max in-flight requests per connection must be <= 5
         configProps.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 5);
-        
+
+        // Performance tuning (Ingress → Kafka: batching + compression)
+        configProps.put(ProducerConfig.BATCH_SIZE_CONFIG, 65536);   // 64 KB
+        configProps.put(ProducerConfig.LINGER_MS_CONFIG, 10);       // 10 ms
+        configProps.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "lz4");
+        configProps.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 67_108_864); // 64 MB (default 32 MB)
+
         return new DefaultKafkaProducerFactory<>(configProps);
     }
+
+
     @Bean
     public KafkaTemplate<String, String> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
