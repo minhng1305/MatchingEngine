@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
 import { Order, Trade } from '../types';
 
@@ -34,7 +33,6 @@ const ProfilePage: React.FC = () => {
     const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'trades'>('overview');
 
-    const { user } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
