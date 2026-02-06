@@ -1,19 +1,21 @@
 /**
  * Server Router for Multi-Server Matching Engine
  *
- * This service maps stock symbols to their corresponding backend servers.
- * Each server processes specific symbols as configured in backend application.properties.
+ * ARCHITECTURE (Kafka-based Dynamic Partitioning):
+ * - Order Submission: ALL orders go to Ingress Server (8085) → Kafka "orders" topic (12 partitions)
+ * - Kafka Consumer Groups: All matching servers (8080, 8081, 8082) subscribe to "orders" topic
+ * - Partition Assignment: Kafka dynamically assigns partitions to servers
+ *   - Server 1 (8080): Partitions 0-3
+ *   - Server 2 (8081): Partitions 4-7
+ *   - Server 3 (8082): Partitions 8-11
+ * - Symbol Distribution: RANDOM (hash-based by Kafka)
+ *   - hash(symbol) % 12 determines which partition (and thus which server) processes that symbol
+ *   - Servers DON'T have pre-assigned symbols!
  *
- * ARCHITECTURE:
- * - Order Submission: ALL orders go to Ingress Server (8085) → Kafka → Matching Servers
- * - Read Operations: Symbol-based routing to matching servers (8080/8081/8082)
- *   Each server maintains OrderBooks for symbols it processes
- *
- * CURRENT SETUP: Single server (8080) handling all symbols
- * Server 1 (8080): AAPL, GOOGL, MSFT, AMZN, TSLA, META, NFLX
- * 
- * NOTE: If you want to use multiple servers, update this configuration to match
- * your backend setup and ensure all servers are running on their respective ports.
+ * PRODUCTION DEPLOYMENT:
+ * - Single backend URL: All read operations go to ONE entry point (load balancer or single server)
+ * - Each server maintains OrderBooks for ALL symbols (via Redis cache or local state)
+ * - Frontend doesn't need to know which server processes which symbol
  */
 
 export interface ServerConfig {
@@ -38,38 +40,71 @@ const getBaseUrl = (envVar: string, defaultPort: number): string => {
     return `http://localhost:${defaultPort}`;
 };
 
+/**
+ * PRODUCTION CONFIGURATION: Single backend URL for all operations
+ * 
+ * Since Kafka dynamically assigns partitions and symbols are hash-distributed,
+ * we cannot predict which server handles which symbol. Instead:
+ * - All read operations go to a single backend URL (load balancer or primary server)
+ * - All servers maintain OrderBooks for ALL symbols (via Redis or state replication)
+ * - Order submissions go to Ingress server (8085) → Kafka → All matching servers
+ */
+export const SERVER_CONFIGS: ServerConfig[] = [
+    {
+        port: 8080,
+        baseUrl: getBaseUrl('REACT_APP_API_BASE_URL', 8080),
+        wsPort: 8080,
+        // ALL symbols - servers maintain OrderBooks for all symbols via Redis/cache
+        symbols: ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NFLX', 
+                  'NVDA', 'AMD', 'INTC', 'IBM', 'ORCL', 'CSCO', 'SAP',
+                  'SNAP', 'BABA', 'TCEHY', 'ADOBE', 'CRM', 'TWTR'],
+        kafkaTopics: ['orders'] // Single topic for all orders
+    }
+];
+
+/**
+ * DEVELOPMENT/LOCAL CONFIGURATION: Multiple servers (uncomment if running locally)
+ * 
+ * For local development with 3 servers + 1 ingress:
+ * - Ingress (8085): Order submission only
+ * - Server 1 (8080): Kafka partitions 0-3
+ * - Server 2 (8081): Kafka partitions 4-7
+ * - Server 3 (8082): Kafka partitions 8-11
+ * 
+ * Note: Even in local mode, symbol distribution is RANDOM (Kafka hash-based)
+ * The configuration below is for load balancing read operations only.
+ */
+/*
 export const SERVER_CONFIGS: ServerConfig[] = [
     {
         port: 8080,
         baseUrl: getBaseUrl('REACT_APP_SERVER1_URL', 8080),
         wsPort: 8080,
-        // ✅ MATCHES: application-server1.properties -> assigned-symbols=AAPL,GOOGL,MSFT,AMZN,TSLA,META,NFLX
-        symbols: ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NFLX'],
-        kafkaTopics: ['order-aapl', 'order-googl', 'order-msft', 'order-amzn',
-            'order-tsla', 'order-meta', 'order-nflx']
-    }
-    // Uncomment below if you're running multiple servers:
-    /*
+        symbols: ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NFLX', 
+                  'NVDA', 'AMD', 'INTC', 'IBM', 'ORCL', 'CSCO', 'SAP',
+                  'SNAP', 'BABA', 'TCEHY', 'ADOBE', 'CRM', 'TWTR'],
+        kafkaTopics: ['orders']
+    },
     {
         port: 8081,
-        baseUrl: 'http://localhost:8081',
+        baseUrl: getBaseUrl('REACT_APP_SERVER2_URL', 8081),
         wsPort: 8081,
-        // ⚠️ MUST match: application-server2.properties -> assigned-symbols
-        symbols: ['NVDA', 'AMD', 'INTC', 'IBM', 'ORCL', 'CSCO', 'SAP'],
-        kafkaTopics: ['order-nvda', 'order-amd', 'order-intc', 'order-ibm',
-            'order-orcl', 'order-csco', 'order-sap']
+        symbols: ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NFLX', 
+                  'NVDA', 'AMD', 'INTC', 'IBM', 'ORCL', 'CSCO', 'SAP',
+                  'SNAP', 'BABA', 'TCEHY', 'ADOBE', 'CRM', 'TWTR'],
+        kafkaTopics: ['orders']
     },
     {
         port: 8082,
-        baseUrl: 'http://localhost:8082',
+        baseUrl: getBaseUrl('REACT_APP_SERVER3_URL', 8082),
         wsPort: 8082,
-        // ⚠️ MUST match: application-server3.properties -> assigned-symbols
-        symbols: ['SNAP', 'BABA', 'TCEHY', 'ADOBE', 'CRM', 'TWTR'],
-        kafkaTopics: ['order-snap', 'order-baba', 'order-tcehy', 'order-adobe',
-            'order-crm', 'order-twtr']
+        symbols: ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NFLX', 
+                  'NVDA', 'AMD', 'INTC', 'IBM', 'ORCL', 'CSCO', 'SAP',
+                  'SNAP', 'BABA', 'TCEHY', 'ADOBE', 'CRM', 'TWTR'],
+        kafkaTopics: ['orders']
     }
-    */
 ];
+*/
 
 class ServerRouter {
     private symbolToServerMap: Map<string, ServerConfig>;
