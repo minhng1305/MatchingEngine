@@ -1,6 +1,4 @@
 {
-  "buildCommand": "cd trading-frontend && npm install && npm run build",
-  "outputDirectory": "trading-frontend/build",
   "rewrites": [
     {
       "source": "/(.*)",
