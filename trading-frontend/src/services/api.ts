@@ -1,4 +1,4 @@
-import { Stock, Order, Trade, OrderBookSummary, OrderBookSummaryApiResponse, LoginCredentials, AuthResponse } from '../types';
+import { Stock, Order, Trade, OrderBookSummaryApiResponse, LoginCredentials, AuthResponse } from '../types';
 import { getServerForSymbol, getAllServerUrls } from './serverRouter';
 
 class ApiService {

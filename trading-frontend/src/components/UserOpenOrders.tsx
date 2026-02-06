@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Order, OrderStatus } from '../types';
 import { apiService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -10,16 +10,7 @@ const UserOpenOrders: React.FC = () => {
     const [error, setError] = useState('');
     const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (user) {
-            loadOrders();
-            // Refresh every 5 seconds
-            const interval = setInterval(loadOrders, 5000);
-            return () => clearInterval(interval);
-        }
-    }, [user]);
-
-    const loadOrders = async () => {
+    const loadOrders = useCallback(async () => {
         if (!user) return;
 
         try {
@@ -37,7 +28,16 @@ const UserOpenOrders: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user]);
+
+    useEffect(() => {
+        if (user) {
+            loadOrders();
+            // Refresh every 5 seconds
+            const interval = setInterval(loadOrders, 5000);
+            return () => clearInterval(interval);
+        }
+    }, [user, loadOrders]);
 
     const handleCancel = async (orderId: string) => {
         if (!orderId) return;

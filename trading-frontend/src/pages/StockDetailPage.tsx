@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { OrderBookSummary, OrderBookSummaryApiResponse, Order } from '../types';
 import { apiService } from '../services/api';
@@ -21,6 +21,35 @@ const StockDetailPage: React.FC = () => {
 
     const { subscribeToOrderBook, subscribeToTrades } = useWebSocket();
 
+    const loadStockDetail = useCallback(async () => {
+        if (!symbol) return;
+
+        try {
+            setError('');
+            const data: OrderBookSummaryApiResponse = await apiService.getStockDetail(symbol);
+
+            // Map API response to internal OrderBookSummary format
+            const safeData: OrderBookSummary = {
+                symbol: data.symbol || symbol,
+                topBuys: data.topBuyOrders || data.topBuys || [],
+                lowestSells: data.topSellOrders || data.lowestSells || [],
+                currentPrice: data.currentPrice || 0,
+                bestBidPrice: data.bestBidPrice || 0,
+                bestBidQuantity: data.bestBidQuantity || 0,
+                bestAskPrice: data.bestAskPrice || 0,
+                bestAskQuantity: data.bestAskQuantity || 0,
+                recentTrades: data.recentTrades || [],
+            };
+
+            setStockData(safeData);
+            setLoading(false);
+        } catch (err) {
+            console.error('Error loading stock detail:', err);
+            setError(err instanceof Error ? err.message : 'Failed to load stock details');
+            setLoading(false);
+        }
+    }, [symbol]);
+
     // Load initial stock data
     useEffect(() => {
         if (!symbol) {
@@ -29,8 +58,7 @@ const StockDetailPage: React.FC = () => {
         }
 
         loadStockDetail();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [symbol]);
+    }, [symbol, loadStockDetail, navigate]);
 
     // Setup WebSocket subscriptions
     useEffect(() => {
@@ -72,36 +100,7 @@ const StockDetailPage: React.FC = () => {
         }, 3000);
 
         return () => clearInterval(interval);
-    }, [symbol]);
-
-    const loadStockDetail = async () => {
-        if (!symbol) return;
-
-        try {
-            setError('');
-            const data: OrderBookSummaryApiResponse = await apiService.getStockDetail(symbol);
-
-            // Map API response to internal OrderBookSummary format
-            const safeData: OrderBookSummary = {
-                symbol: data.symbol || symbol,
-                topBuys: data.topBuyOrders || data.topBuys || [],
-                lowestSells: data.topSellOrders || data.lowestSells || [],
-                currentPrice: data.currentPrice || 0,
-                bestBidPrice: data.bestBidPrice || 0,
-                bestBidQuantity: data.bestBidQuantity || 0,
-                bestAskPrice: data.bestAskPrice || 0,
-                bestAskQuantity: data.bestAskQuantity || 0,
-                recentTrades: data.recentTrades || [],
-            };
-
-            setStockData(safeData);
-            setLoading(false);
-        } catch (err) {
-            console.error('Error loading stock detail:', err);
-            setError(err instanceof Error ? err.message : 'Failed to load stock details');
-            setLoading(false);
-        }
-    };
+    }, [symbol, loadStockDetail]);
 
     const handleOrderSubmit = async (order: Order) => {
         try {
