@@ -23,7 +23,7 @@ A high-performance trading platform with real-time order matching, WebSocket upd
                               │
       ┌─────────────────────--┼───────────────────-─┐
       │                       │                     │
-┌───────▼────┐        ┌───────▼────-┐        ┌──────▼─────┐
+┌─────▼────--┐        ┌───────▼────-┐        ┌──────▼─────┐
 │ Server 1   │        │ Server 2    │        │ Server 3   │
 │ Port 8080  │        │ Port 8081   │        │ Port 8082  │
 └─────┬──────┘        └────-─┬──────┘        └──────┬─────┘
