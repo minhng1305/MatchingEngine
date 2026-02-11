@@ -23,7 +23,7 @@ import com.project.matchingengine.service.orderbook.OrderService;
 
 
 @RestController
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "${spring.web.cors.allowed-origins}")
 @RequestMapping("api/orders")
 @Validated
 @Profile("!ingress")

@@ -24,7 +24,7 @@ import com.project.matchingengine.service.user.UserDetailsCacheService;
 
 
 @RestController
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "${spring.web.cors.allowed-origins}")
 @RequestMapping("api/user")
 public class UserController
 {

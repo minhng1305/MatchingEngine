@@ -1,21 +1,24 @@
 package com.project.matchingengine.controllers.authentication;
 
-import com.project.matchingengine.controllers.order.OrderController;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Optional;
-
+import com.project.matchingengine.controllers.order.OrderController;
 import com.project.matchingengine.models.authentication.LoginCredentials;
 import com.project.matchingengine.models.authentication.User;
 import com.project.matchingengine.repository.authentication.UserRepo;
@@ -23,7 +26,7 @@ import com.project.matchingengine.utils.JwtUtil;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "${spring.web.cors.allowed-origins}")
 public class AuthController
 {
     private static final Logger logger = LoggerFactory.getLogger(OrderController.class);

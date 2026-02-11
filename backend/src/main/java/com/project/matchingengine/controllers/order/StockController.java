@@ -23,7 +23,7 @@ import java.util.HashMap;
 
 
 @RestController
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "${spring.web.cors.allowed-origins}")
 @RequestMapping("api/stocks")
 @Validated
 @Profile("!ingress")

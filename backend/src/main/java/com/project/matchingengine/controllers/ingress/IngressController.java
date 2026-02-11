@@ -4,7 +4,6 @@ import java.sql.Timestamp;
 import java.util.Map;
 import java.util.UUID;
 
-import com.project.matchingengine.service.orderbook.OrderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,11 +20,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.matchingengine.models.order.Order;
 import com.project.matchingengine.models.order.OrderSide;
 import com.project.matchingengine.models.order.OrderType;
-import com.project.matchingengine.service.kafka.KafkaProducer;
+import com.project.matchingengine.service.orderbook.OrderService;
 
 
 @RestController
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "${spring.web.cors.allowed-origins}")
 @RequestMapping("/api/orders")
 @Validated
 @Profile("ingress")
