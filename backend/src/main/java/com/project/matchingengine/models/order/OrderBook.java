@@ -215,13 +215,21 @@ public class OrderBook {
     public double getCurrentPrice() {
         readLock.lock();
         try {
-            if (trades == null || trades.isEmpty()) {
-                return 0.0; // Or another default value like -1 or Double.NaN
+            if (trades != null && !trades.isEmpty()) {
+                this.currentPrice = trades.get(trades.size() - 1).getPrice();
             }
-            this.currentPrice = trades.get(trades.size() - 1).getPrice();
             return currentPrice;
         } finally {
             readLock.unlock();
+        }
+    }
+
+    public void setCurrentPrice(double price) {
+        writeLock.lock();
+        try {
+            this.currentPrice = price;
+        } finally {
+            writeLock.unlock();
         }
     }
 
