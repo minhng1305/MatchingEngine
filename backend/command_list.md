@@ -33,6 +33,13 @@ bin/zookeeper-server-start.sh config/zookeeper.properties
 # kafka server: run 2nd
 bin/kafka-server-start.sh config/server.properties
 
+# kafka parttions:
+cd backend/kafka_2.13-3.9.1
+
+bin/kafka-topics.sh --bootstrap-server localhost:9092 \
+--alter --topic orders \
+--partitions 12
+
 # to see all topics
 bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
 
