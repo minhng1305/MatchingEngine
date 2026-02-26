@@ -11,24 +11,27 @@ const server3Url = import.meta.env.VITE_SERVER3_URL || 'http://localhost:8082';
 
 export const INGRESS_URL = import.meta.env.VITE_INGRESS_BASE_URL || 'http://localhost:8085/api';
 
+// Symbol groups are based on Kafka partition assignment (murmur2 hash % 12 partitions).
+// Partitions 0-3, 4-7, 8-11 are assigned to servers in the order they join the consumer group.
+// Verify via server logs ("Processing N orders from partitions: [...]") and swap URLs if needed.
 export const SERVERS: ServerConfig[] = [
   {
     id: 'server1',
     baseUrl: `${server1Url}/api`,
     wsUrl: `${server1Url}/ws`,
-    symbols: ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NFLX'],
+    symbols: ['META', 'GOOGL'],
   },
   {
     id: 'server2',
     baseUrl: `${server2Url}/api`,
     wsUrl: `${server2Url}/ws`,
-    symbols: ['NVDA', 'AMD', 'INTC', 'IBM', 'ORCL', 'CSCO', 'SAP'],
+    symbols: ['NFLX', 'INTC', 'TWTR', 'AMZN', 'NVDA', 'ORCL', 'MSFT', 'TCEHY', 'SNAP'],
   },
   {
     id: 'server3',
     baseUrl: `${server3Url}/api`,
     wsUrl: `${server3Url}/ws`,
-    symbols: ['ADOBE', 'CRM', 'TWTR', 'SNAP', 'BABA', 'TCEHY'],
+    symbols: ['AAPL', 'SAP', 'BABA', 'AMD', 'ADOBE', 'CRM', 'TSLA', 'IBM', 'CSCO'],
   },
 ];
 
