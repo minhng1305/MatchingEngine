@@ -27,7 +27,7 @@ import com.project.matchingengine.service.orderbook.OrderService;
 @CrossOrigin(origins = "${spring.web.cors.allowed-origins}")
 @RequestMapping("/api/orders")
 @Validated
-@Profile("ingress")
+@Profile({"ingress", "production"})
 public class IngressController {
 
     private static final Logger logger = LoggerFactory.getLogger(IngressController.class);
