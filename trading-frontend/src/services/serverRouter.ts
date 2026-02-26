@@ -43,10 +43,8 @@ export const SERVER_CONFIGS: ServerConfig[] = [
         port: 8080,
         baseUrl: getBaseUrl('REACT_APP_SERVER1_URL', 8080),
         wsPort: 8080,
-        // ✅ MATCHES: application-server1.properties -> assigned-symbols=AAPL,GOOGL,MSFT,AMZN,TSLA,META,NFLX
         symbols: ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NFLX'],
-        kafkaTopics: ['order-aapl', 'order-googl', 'order-msft', 'order-amzn',
-            'order-tsla', 'order-meta', 'order-nflx']
+        kafkaTopics: ['orders']
     }
     // Uncomment below if you're running multiple servers:
     /*
@@ -153,9 +151,9 @@ class ServerRouter {
                 totalSymbols++;
             });
 
-            // Verify Kafka topics match symbols
-            if (config.kafkaTopics.length !== config.symbols.length) {
-                errors.push(`⚠️ Server ${config.port}: ${config.symbols.length} symbols but ${config.kafkaTopics.length} topics`);
+            // Verify Kafka topics are configured
+            if (config.kafkaTopics.length === 0) {
+                errors.push(`⚠️ Server ${config.port}: no Kafka topics configured`);
             }
         });
 
