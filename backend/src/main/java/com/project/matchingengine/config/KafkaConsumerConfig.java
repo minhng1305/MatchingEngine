@@ -3,8 +3,10 @@ package com.project.matchingengine.config;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.config.SaslConfigs;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,6 +38,15 @@ public class KafkaConsumerConfig {
     @Value("${app.kafka.dlq.topic:orders-dlq}")
     private String dlqTopic;
 
+    @Value("${spring.kafka.consumer.properties.security.protocol:#{null}}")
+    private String securityProtocol;
+
+    @Value("${spring.kafka.consumer.properties.sasl.mechanism:#{null}}")
+    private String saslMechanism;
+
+    @Value("${spring.kafka.consumer.properties.sasl.jaas.config:#{null}}")
+    private String saslJaasConfig;
+
     @Autowired(required = false)
     private KafkaTemplate<String, String> kafkaTemplate;
 
@@ -47,6 +58,13 @@ public class KafkaConsumerConfig {
         configProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         configProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         configProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+
+        if (securityProtocol != null && !securityProtocol.isEmpty()) {
+            configProps.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, securityProtocol);
+            configProps.put(SaslConfigs.SASL_MECHANISM, saslMechanism);
+            configProps.put(SaslConfigs.SASL_JAAS_CONFIG, saslJaasConfig);
+        }
+
         return new DefaultKafkaConsumerFactory<>(configProps);
     }
 
