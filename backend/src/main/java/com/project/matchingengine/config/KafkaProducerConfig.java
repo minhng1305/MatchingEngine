@@ -3,7 +3,9 @@ package com.project.matchingengine.config;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.config.SaslConfigs;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -17,6 +19,15 @@ import org.springframework.kafka.core.ProducerFactory;
 public class KafkaProducerConfig {
     @Value("${spring.kafka.producer.bootstrap-servers}")
     private String bootstrapServers;
+
+    @Value("${spring.kafka.producer.properties.security.protocol:#{null}}")
+    private String securityProtocol;
+
+    @Value("${spring.kafka.producer.properties.sasl.mechanism:#{null}}")
+    private String saslMechanism;
+
+    @Value("${spring.kafka.producer.properties.sasl.jaas.config:#{null}}")
+    private String saslJaasConfig;
 
     @Bean
     public ProducerFactory<String, String> producerFactory() {
@@ -42,6 +53,12 @@ public class KafkaProducerConfig {
         configProps.put(ProducerConfig.LINGER_MS_CONFIG, 10);       // 10 ms
         configProps.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "lz4");
         configProps.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 67_108_864); // 64 MB (default 32 MB)
+
+        if (securityProtocol != null && !securityProtocol.isEmpty()) {
+            configProps.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, securityProtocol);
+            configProps.put(SaslConfigs.SASL_MECHANISM, saslMechanism);
+            configProps.put(SaslConfigs.SASL_JAAS_CONFIG, saslJaasConfig);
+        }
 
         return new DefaultKafkaProducerFactory<>(configProps);
     }
