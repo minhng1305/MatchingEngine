@@ -32,7 +32,6 @@ public class IngressController {
 
     private static final Logger logger = LoggerFactory.getLogger(IngressController.class);
     private final ObjectMapper objectMapper;
-//    private final KafkaProducer kafkaProducer;
     private final OrderService orderService;
 
     @Autowired
@@ -41,7 +40,6 @@ public class IngressController {
         this.orderService = orderService;
     }
 
-    // FIXME: As this sends order immediately to Kafka, there is no validation whether the user exists or has sufficient balance, as well as no cache check
     @PostMapping("/submit")
     public ResponseEntity<?> submitOrder(@RequestBody Map<String, Object> orderData) {
         try {
