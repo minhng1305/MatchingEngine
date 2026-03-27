@@ -37,8 +37,13 @@ bin/kafka-server-start.sh config/server.properties
 cd backend/kafka_2.13-3.9.1
 
 bin/kafka-topics.sh --bootstrap-server localhost:9092 \
---alter --topic orders \
---partitions 12
+--create --topic orders \
+--partitions 12 \
+--replication-factor 1
+
+# verify the topic
+bin/kafka-topics.sh --bootstrap-server localhost:9092 \
+--describe --topic orders
 
 # to see all topics
 bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
